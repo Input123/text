@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Cammino Santiago - APP</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        /* ========== 基础样式 ========== */
+        * { 
+            margin: 0; padding: 0; box-sizing: border-box; 
+            font-family: 'Roboto', 'Segoe UI', sans-serif; 
+        }
+        
+        body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background-color: #f5f5f5;
+        }
+
+        /* ========== 顶部导航栏 ========== */
+        .app-header {
+            background: linear-gradient(135deg, #8B0000 0%, #9a2a2a 100%);
+            color: white;
+            padding: 16px 20px;
+            box-shadow: 0 4px 12px rgba(154, 42, 42, 0.25);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 100;
+            min-height: 60px;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .app-logo {
+            font-size: 1.8rem;
+            animation: bounce 2s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .app-header h1 {
+            font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+            font-weight: 700;
+            background: linear-gradient(45deg, #fff, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .header-btn {
+            background: rgba(255, 255, 255, 0.15);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+        
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: scale(1.1);
+        }
+        
+        .progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            width: 0%;
+            transition: width 0.5s ease;
+            border-radius: 0 2px 2px 0;
+        }
+
+        /* ========== 主内容区 ========== */
+        .app-content {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        }
+
+        .screen {
+            display: none;
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .screen.active {
+            display: block;
+        }
+
+        /* ========== 页面1：火车风格规划页 ========== */
+        .plan-screen {
+            background: transparent;
+        }
+        
+        /* 火车票风格卡片 - 增强版 */
+        .train-card {
+            background: linear-gradient(145deg, #ffffff, #f8f9fa);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 
+                0 8px 32px rgba(154, 42, 42, 0.1),
+                0 4px 12px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+            margin-bottom: 24px;
+            border-left: 5px solid #9a2a2a;
+            border-right: 1px solid rgba(154, 42, 42, 0.1);
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .train-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, #9a2a2a, #8B0000);
+        }
+        
+        .train-card h2 {
+            color: #9a2a2a;
+            font-size: clamp(1.3rem, 3.5vw, 1.6rem);
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 700;
+            position: relative;
+            padding-bottom: 12px;
+        }
+        
+        .train-card h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 3px;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            border-radius: 2px;
+        }
+        
+        /* 选择器组优化 */
+        .selector-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .selector-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #2d3436;
+            font-size: clamp(0.95rem, 2.2vw, 1.05rem);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .selector-group select, 
+        .selector-group input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: clamp(0.95rem, 2.2vw, 1.05rem);
+            background: white;
+            color: #2d3436;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .selector-group select:focus,
+        .selector-group input:focus {
+            outline: none;
+            border-color: #9a2a2a;
+            box-shadow: 0 0 0 3px rgba(154, 42, 42, 0.15);
+        }
+        
+        .selector-group select option {
+            padding: 12px;
+        }
+        
+        /* 难度选择器优化 */
+        .difficulty-options {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        
+        .difficulty-option {
+            flex: 1 1 calc(33.333% - 8px);
+            padding: 16px 8px;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s ease;
+            font-size: clamp(0.85rem, 2vw, 0.95rem);
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100px;
+        }
+        
+        .difficulty-option:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .difficulty-option.active {
+            border-color: #9a2a2a;
+            background: linear-gradient(135deg, #fffaf0, #ffe5e5);
+            color: #9a2a2a;
+            font-weight: 600;
+            box-shadow: 0 6px 12px rgba(154, 42, 42, 0.15);
+        }
+        
+        .difficulty-option .icon {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        
+        .difficulty-option.easy { border-color: #2ecc71; }
+        .difficulty-option.medium { border-color: #f39c12; }
+        .difficulty-option.hard { border-color: #e74c3c; }
+        .difficulty-option.active.easy { 
+            background: linear-gradient(135deg, #f0fff4, #e8f8f5); 
+            color: #27ae60; 
+        }
+        .difficulty-option.active.medium { 
+            background: linear-gradient(135deg, #fffbf0, #fef9e7); 
+            color: #f39c12; 
+        }
+        .difficulty-option.active.hard { 
+            background: linear-gradient(135deg, #fff5f5, #fdedec); 
+            color: #e74c3c; 
+        }
+        
+        /* 按钮组优化 */
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            margin-top: 32px;
+            flex-wrap: wrap;
+        }
+        
+        .action-btn {
+            flex: 1 1 160px;
+            padding: 16px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: clamp(0.95rem, 2.2vw, 1.05rem);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            letter-spacing: 0.5px;
+        }
+        
+        .action-btn.primary {
+            background: linear-gradient(135deg, #9a2a2a, #8B0000);
+            color: white;
+            box-shadow: 0 4px 12px rgba(154, 42, 42, 0.3);
+        }
+        
+        .action-btn.primary:hover {
+            background: linear-gradient(135deg, #8a2525, #7A0000);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(154, 42, 42, 0.4);
+        }
+        
+        .action-btn.primary:active {
+            transform: translateY(0);
+        }
+        
+        .action-btn.secondary {
+            background: white;
+            color: #2d3436;
+            border: 2px solid #e0e0e0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .action-btn.secondary:hover {
+            background: #f8f9fa;
+            border-color: #9a2a2a;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+        
+        /* Tappe列表优化 */
+        .tappe-container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .tappe-container h3 {
+            margin-bottom: 16px;
+            color: #9a2a2a;
+            text-align: center;
+            font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+            font-weight: 700;
+            padding: 8px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .tappe-list {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            max-height: 350px;
+            overflow-y: auto;
+            border: 1px solid rgba(154, 42, 42, 0.1);
+        }
+        
+        /* 自定义滚动条 */
+        .tappe-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .tappe-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        
+        .tappe-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #9a2a2a, #8B0000);
+            border-radius: 4px;
+        }
+        
+        .tappe-list::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #8a2525, #7A0000);
+        }
+        
+        .tappe-header {
+            display: grid;
+            grid-template-columns: 0.5fr 3fr 1.5fr 1.5fr;
+            padding: 16px;
+            background: linear-gradient(135deg, #9a2a2a, #8B0000);
+            color: white;
+            font-size: clamp(0.8rem, 2vw, 0.9rem);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .tappe-item {
+            display: grid;
+            grid-template-columns: 0.5fr 3fr 1.5fr 1.5fr;
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: clamp(0.85rem, 2vw, 0.95rem);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .tappe-item:hover {
+            background: linear-gradient(90deg, rgba(154, 42, 42, 0.05), transparent);
+            transform: translateX(4px);
+        }
+        
+        .tappe-item.selected {
+            background: linear-gradient(90deg, rgba(154, 42, 42, 0.1), transparent);
+            border-left: 4px solid #9a2a2a;
+        }
+        
+        .tappe-item:nth-child(even) {
+            background-color: #fafafa;
+        }
+        
+        .tappe-item:nth-child(even):hover {
+            background: linear-gradient(90deg, rgba(154, 42, 42, 0.08), rgba(154, 42, 42, 0.02));
+        }
+        
+        .tappe-item .num {
+            color: #9a2a2a;
+            font-weight: 700;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .tappe-item .route {
+            color: #2d3436;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+        
+        .tappe-item .distance, 
+        .tappe-item .total {
+            text-align: right;
+            color: #636e72;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            font-weight: 500;
+        }
+        
+        .tappe-item .total {
+            color: #9a2a2a;
+            font-weight: 600;
+        }
+
+        /* ========== 页面2：地图页 ========== */
+        .map-screen {
+            display: flex;
+            flex-direction: row;
+            overflow: hidden;
+            padding: 0;
+        }
+        
+        /* 左侧信息面板优化 */
+        .info-sidebar {
+            width: clamp(320px, 35vw, 400px);
+            background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+            padding: 24px;
+            box-shadow: 4px 0 20px rgba(0,0,0,0.08);
+            overflow-y: auto;
+            z-index: 10;
+            border-right: 1px solid rgba(154, 42, 42, 0.1);
+        }
+        
+        .info-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            border: 1px solid rgba(154, 42, 42, 0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        }
+        
+        .info-card h3 {
+            color: #9a2a2a;
+            font-size: clamp(1rem, 2.2vw, 1.15rem);
+            margin-bottom: 16px;
+            font-weight: 700;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(154, 42, 42, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #eee;
+            font-size: clamp(0.85rem, 2vw, 0.95rem);
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-row .label {
+            color: #636e72;
+            font-weight: 500;
+        }
+        
+        .info-row .value {
+            font-weight: 600;
+            color: #2d3436;
+        }
+        
+        /* 地图容器优化 */
+        .map-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* 地图控制按钮 */
+        .map-controls {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .map-control-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+            color: #9a2a2a;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .map-control-btn:hover {
+            background: #9a2a2a;
+            color: white;
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(154, 42, 42, 0.3);
+        }
+
+        /* ========== 页面3：设置页 ========== */
+        .settings-screen {
+            background: transparent;
+        }
+        
+        .settings-screen h2 {
+            color: #9a2a2a;
+            font-size: clamp(1.3rem, 3.5vw, 1.5rem);
+            margin-bottom: 32px;
+            text-align: center;
+            font-weight: 700;
+            position: relative;
+            padding-bottom: 12px;
+        }
+        
+        .settings-screen h2::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 3px;
+            background: linear-gradient(90deg, #ffd700, #ff6b6b);
+            border-radius: 2px;
+        }
+        
+        .settings-container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .setting-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid rgba(154, 42, 42, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .setting-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .setting-item .text {
+            font-size: clamp(0.95rem, 2.2vw, 1.05rem);
+            color: #2d3436;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .setting-item .toggle {
+            width: 48px;
+            height: 26px;
+            background: #e0e0e0;
+            border-radius: 13px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .setting-item .toggle.active {
+            background: linear-gradient(135deg, #9a2a2a, #8B0000);
+        }
+        
+        .setting-item .toggle.active::after {
+            left: 24px;
+        }
+        
+        .setting-item .toggle::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            top: 3px;
+            left: 3px;
+            transition: left 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .setting-item .select {
+            padding: 8px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: clamp(0.85rem, 2vw, 0.95rem);
+            background: white;
+            color: #2d3436;
+            min-width: 120px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .setting-item .select:focus {
+            outline: none;
+            border-color: #9a2a2a;
+        }
+        
+        .setting-item .reset-btn {
+            color: #e74c3c;
+            cursor: pointer;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .setting-item .reset-btn:hover {
+            background: #ffe5e5;
+        }
+        
+        /* ========== 底部标签栏 ========== */
+        .app-tabbar {
+            display: flex;
+            background: white;
+            border-top: 1px solid rgba(154, 42, 42, 0.1);
+            padding: 8px 0;
+            z-index: 100;
+            box-shadow: 0 -4px 16px rgba(0,0,0,0.05);
+        }
+        
+        .tab-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #95a5a6;
+            cursor: pointer;
+            padding: 12px 0;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .tab-item:hover {
+            color: #9a2a2a;
+            background: rgba(154, 42, 42, 0.05);
+        }
+        
+        .tab-item.active {
+            color: #9a2a2a;
+            font-weight: 600;
+        }
+        
+        .tab-item.active::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 3px;
+            background: linear-gradient(90deg, #9a2a2a, #8B0000);
+            border-radius: 0 0 2px 2px;
+        }
+        
+        .tab-item .icon {
+            font-size: clamp(1.2rem, 2.5vw, 1.4rem);
+            margin-bottom: 4px;
+            transition: transform 0.3s ease;
+        }
+        
+        .tab-item.active .icon {
+            transform: scale(1.1);
+        }
+        
+        .tab-item .label {
+            font-size: clamp(0.75rem, 2vw, 0.85rem);
+            font-weight: 500;
+        }
+        
+        .notification-badge {
+            position: absolute;
+            top: 8px;
+            right: calc(50% - 20px);
+            width: 8px;
+            height: 8px;
+            background: #e74c3c;
+            border-radius: 50%;
+            box-shadow: 0 0 0 2px white;
+        }
+        
+        /* ========== 响应式设计 ========== */
+        @media (max-width: 768px) {
+            .app-header {
+                padding: 12px 16px;
+                min-height: 56px;
+            }
+            
+            .map-screen {
+                flex-direction: column;
+            }
+            
+            .info-sidebar {
+                width: 100%;
+                height: 280px;
+                box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+                border-right: none;
+                border-bottom: 1px solid rgba(154, 42, 42, 0.1);
+            }
+            
+            .tappe-header, 
+            .tappe-item {
+                grid-template-columns: 0.7fr 2.5fr 1.2fr 1.2fr;
+                padding: 14px 12px;
+            }
+            
+            .train-card {
+                padding: 20px 16px;
+                margin: 0 12px 20px;
+            }
+            
+            .action-buttons {
+                gap: 12px;
+            }
+            
+            .action-btn {
+                flex: 1 1 100%;
+            }
+            
+            .map-controls {
+                bottom: 16px;
+                right: 16px;
+            }
+            
+            .map-control-btn {
+                width: 44px;
+                height: 44px;
+                font-size: 1.2rem;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .difficulty-option {
+                flex: 1 1 100%;
+                min-height: 80px;
+            }
+            
+            .train-card {
+                padding: 16px 14px;
+            }
+            
+            .info-sidebar {
+                padding: 16px;
+                height: 260px;
+            }
+            
+            .info-card {
+                padding: 16px;
+            }
+            
+            .setting-item {
+                padding: 16px;
+            }
+        }
+        
+        /* 平板和大屏优化 */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .info-sidebar {
+                width: 300px;
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            body {
+                max-width: 1200px;
+                margin: 20px auto;
+                border-radius: 24px;
+                overflow: hidden;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            }
+            
+            .train-card,
+            .tappe-container {
+                max-width: 800px;
+            }
+            
+            .settings-container {
+                max-width: 700px;
+            }
+        }
+        
+        /* 深色模式支持 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                color-scheme: dark;
+            }
+            
+            body {
+                background: #1a1a1a;
+            }
+            
+            .plan-screen {
+                background: transparent;
+            }
+            
+            .train-card {
+                background: #2d2d2d;
+                color: #e0e0e0;
+            }
+            
+            .tappe-list {
+                background: #2d2d2d;
+                color: #e0e0e0;
+            }
+            
+            .info-sidebar {
+                background: #2d2d2d;
+                color: #e0e0e0;
+            }
+            
+            .info-card {
+                background: #333;
+                color: #e0e0e0;
+            }
+            
+            .setting-item {
+                background: #333;
+                color: #e0e0e0;
+            }
+        }
+        
+        /* 动画效果 */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(154, 42, 42, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(154, 42, 42, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(154, 42, 42, 0); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <div class="app-header">
+        <div class="header-left">
+            <div class="app-logo">🚶‍♂️</div>
+            <h1>Cammino di Santiago</h1>
+        </div>
+        <div class="header-actions">
+            <button class="header-btn" id="notifications-btn" title="Notifiche">
+                🔔
+                <div class="notification-badge"></div>
+            </button>
+            <button class="header-btn" id="profile-btn" title="Profilo">
+                👤
+            </button>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="app-content">
+        <!-- 页面1：火车风格规划页 -->
+        <div class="screen plan-screen active" id="plan-screen">
+            <div class="train-card">
+                <h2>🎫 Pianifica il Tuo Cammino</h2>
+                
+                <div class="selector-group">
+                    <label>🏋️ Livello di Difficoltà</label>
+                    <div class="difficulty-options">
+                        <div class="difficulty-option easy active" data-difficulty="easy">
+                            <div class="icon">😊</div>
+                            <div>Facile</div>
+                            <div style="font-size: 0.8rem; color: inherit; opacity: 0.9;">(20km/giorno)</div>
+                        </div>
+                        <div class="difficulty-option medium" data-difficulty="medium">
+                            <div class="icon">😐</div>
+                            <div>Medio</div>
+                            <div style="font-size: 0.8rem; color: inherit; opacity: 0.9;">(25km/giorno)</div>
+                        </div>
+                        <div class="difficulty-option hard" data-difficulty="hard">
+                            <div class="icon">😤</div>
+                            <div>Difficile</div>
+                            <div style="font-size: 0.8rem; color: inherit; opacity: 0.9;">(30km/giorno)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="selector-group">
+                    <label>📅 Numero di Giorni</label>
+                    <input type="number" id="days-input" min="1" max="40" value="34" 
+                           placeholder="Inserisci giorni totali">
+                </div>
+
+                <div class="selector-group">
+                    <label>📍 Tappe da Percorrere</label>
+                    <select id="tappe-select">
+                        <option value="all">Tutte le 34 tappe (772km)</option>
+                        <option value="10">Prime 10 tappe (233km)</option>
+                        <option value="20">Prime 20 tappe (444km)</option>
+                        <option value="30">Prime 30 tappe (678km)</option>
+                    </select>
+                </div>
+
+                <div class="selector-group">
+                    <label>🚶 Mezzo di Trasporto</label>
+                    <select id="transport-select">
+                        <option value="walk">A Piedi (5km/h)</option>
+                        <option value="bike">In Bicicletta (15km/h)</option>
+                    </select>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="action-btn secondary" id="preview-btn">
+                        👁️ Anteprima Percorso
+                    </button>
+                    <button class="action-btn primary" id="start-btn">
+                        🚀 Inizia Cammino
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tappe列表 -->
+            <div class="tappe-container">
+                <h3>📜 Lista Tappe</h3>
+                <div class="tappe-list">
+                    <div class="tappe-header">
+                        <div>N°</div>
+                        <div>Tratto</div>
+                        <div>Distanza</div>
+                        <div>Totale</div>
+                    </div>
+                    <div id="tappe-table"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页面2：地图页 -->
+        <div class="screen map-screen" id="map-screen">
+            <!-- 左侧信息面板 -->
+            <div class="info-sidebar">
+                <div class="info-card">
+                    <h3>📊 Informazioni Percorso</h3>
+                    <div class="info-row">
+                        <span class="label">Difficoltà:</span>
+                        <span class="value" id="info-difficulty">Facile</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Giorni Totali:</span>
+                        <span class="value" id="info-days">34</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Mezzo:</span>
+                        <span class="value" id="info-transport">A Piedi</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Tappe Selezionate:</span>
+                        <span class="value" id="info-tappe">34</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Distanza Totale:</span>
+                        <span class="value" id="info-distance">772 km</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Tempo Stimato:</span>
+                        <span class="value" id="info-time">~193 ore</span>
+                    </div>
+                </div>
+
+                <div class="info-card">
+                    <h3>📍 Ultima Tappa</h3>
+                    <div class="info-row">
+                        <span class="label">Tratto:</span>
+                        <span class="value">O Pedrouzo → Santiago</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Distanza:</span>
+                        <span class="value">20 km</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Tempo Stimato:</span>
+                        <span class="value">5 ore</span>
+                    </div>
+                </div>
+                
+                <div class="info-card">
+                    <h3>🎯 Obiettivo Giornaliero</h3>
+                    <div class="info-row">
+                        <span class="label">Oggi:</span>
+                        <span class="value">20 km</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Completato:</span>
+                        <span class="value">752/772 km</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Progresso:</span>
+                        <span class="value">97.4%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右侧地图 -->
+            <div class="map-container">
+                <div id="map"></div>
+                <div class="map-controls">
+                    <button class="map-control-btn" id="zoom-in" title="Ingrandisci">➕</button>
+                    <button class="map-control-btn" id="zoom-out" title="Riduci">➖</button>
+                    <button class="map-control-btn" id="locate-btn" title="Posizione Attuale">📍</button>
+                    <button class="map-control-btn" id="map-layer" title="Cambia Mappa">🗺️</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 页面3：设置页 -->
+        <div class="screen settings-screen" id="settings-screen">
+            <h2>⚙️ Impostazioni</h2>
+            
+            <div class="settings-container">
+                <div class="setting-item">
+                    <div class="text">
+                        <span style="color: #9a2a2a; font-size: 1.2rem;">🔔</span>
+                        Notifiche Push
+                    </div>
+                    <div class="toggle active"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="text">
+                        <span style="color: #9a2a2a; font-size: 1.2rem;">🌙</span>
+                        Modalità Scura
+                    </div>
+                    <div class="toggle"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="text">
+                        <span style="color: #9a2a2a; font-size: 1.2rem;">📏</span>
+                        Unità di Misura
+                    </div>
+                    <select class="select" id="unit-select">
+                        <option value="km" selected>Chilometri (km)</option>
+                        <option value="mi">Miglia (mi)</option>
+                    </select>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="text">
+                        <span style="color: #9a2a2a; font-size: 1.2rem;">🌍</span>
+                        Lingua
+                    </div>
+                    <select class="select" id="language-select">
+                        <option value="it" selected>Italiano</option>
+                        <option value="en">English</option>
+                        <option value="es">Español</option>
+                        <option value="fr">Français</option>
+                        <option value="de">Deutsch</option>
+                    </select>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="text">
+                        <span style="color: #9a2a2a; font-size: 1.2rem;">💾</span>
+                        Salva Dati Offline
+                    </div>
+                    <div class="toggle"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="text">
+                        <span style="color: #9a2a2a; font-size: 1.2rem;">📊</span>
+                        Condividi Statistiche
+                    </div>
+                    <div class="toggle active"></div>
+                </div>
+                
+                <div class="setting-item">
+                    <div class="text">
+                        <span style="color: #9a2a2a; font-size: 1.2rem;">🔄</span>
+                        Reset Impostazioni
+                    </div>
+                    <div class="reset-btn" id="reset-settings">Reset</div>
+                </div>
+                
+                <div class="setting-item" style="border-bottom: none;">
+                    <div class="text">
+                        <span style="color: #9a2a2a; font-size: 1.2rem;">ℹ️</span>
+                        Informazioni APP
+                    </div>
+                    <div style="color: #9a2a2a; font-weight: 600;">v2.1.0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部标签栏 -->
+    <div class="app-tabbar">
+        <div class="tab-item active" data-screen="plan-screen">
+            <div class="icon">🎫</div>
+            <div class="label">Pianifica</div>
+        </div>
+        <div class="tab-item" data-screen="map-screen">
+            <div class="icon">🗺️</div>
+            <div class="label">Mappa</div>
+        </div>
+        <div class="tab-item" data-screen="settings-screen">
+            <div class="icon">⚙️</div>
+            <div class="label">Impostazioni</div>
+            <div class="notification-badge" id="settings-badge"></div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 全局变量 ==========
+        const tappeData = [
+            { num: 1, fromTo: "Saint-Jean-Pied-de-Port→Roncisvalle", distance: "24 km", total: "24 km" },
+            { num: 2, fromTo: "Roncisvalle→Zubiri", distance: "21 km", total: "45 km" },
+            { num: 3, fromTo: "Zubiri→Pamplona", distance: "20 km", total: "65 km" },
+            { num: 4, fromTo: "Pamplona→Puente la Reina", distance: "24 km", total: "89 km" },
+            { num: 5, fromTo: "Puente la Reina→Estella", distance: "22 km", total: "111 km" },
+            { num: 6, fromTo: "Estella→Los Arcos", distance: "21 km", total: "132 km" },
+            { num: 7, fromTo: "Los Arcos→Logroño", distance: "28 km", total: "160 km" },
+            { num: 8, fromTo: "Logroño→Nájera", distance: "29 km", total: "189 km" },
+            { num: 9, fromTo: "Nájera→Santo Domingo", distance: "21 km", total: "210 km" },
+            { num: 10, fromTo: "Santo Domingo→Belorado", distance: "23 km", total: "233 km" },
+            { num: 11, fromTo: "Belorado→San Juan de Ortega", distance: "24 km", total: "257 km" },
+            { num: 12, fromTo: "San Juan de Ortega→Burgos", distance: "26 km", total: "283 km" },
+            { num: 13, fromTo: "Burgos→Hornillos", distance: "21 km", total: "304 km" },
+            { num: 14, fromTo: "Hornillos→Castrojeriz", distance: "20 km", total: "324 km" },
+            { num: 15, fromTo: "Castrojeriz→Frómista", distance: "25 km", total: "349 km" },
+            { num: 16, fromTo: "Frómista→Carrión", distance: "19 km", total: "368 km" },
+            { num: 17, fromTo: "Carrión→Calzadilla", distance: "17 km", total: "385 km" },
+            { num: 18, fromTo: "Calzadilla→Sahagún", distance: "22 km", total: "407 km" },
+            { num: 19, fromTo: "Sahagún→El Burgo Ranero", distance: "18 km", total: "425 km" },
+            { num: 20, fromTo: "El Burgo Ranero→Mansilla", distance: "19 km", total: "444 km" },
+            { num: 21, fromTo: "Mansilla→León", distance: "18 km", total: "462 km" },
+            { num: 22, fromTo: "León→San Martín", distance: "25 km", total: "487 km" },
+            { num: 23, fromTo: "San Martín→Astorga", distance: "24 km", total: "511 km" },
+            { num: 24, fromTo: "Astorga→Rabanal", distance: "20 km", total: "531 km" },
+            { num: 25, fromTo: "Rabanal→Ponferrada", distance: "32 km", total: "563 km" },
+            { num: 26, fromTo: "Ponferrada→Villafranca", distance: "24 km", total: "587 km" },
+            { num: 27, fromTo: "Villafranca→O Cebreiro", distance: "28 km", total: "615 km" },
+            { num: 28, fromTo: "O Cebreiro→Triacastela", distance: "21 km", total: "636 km" },
+            { num: 29, fromTo: "Triacastela→Sarria", distance: "20 km", total: "656 km" },
+            { num: 30, fromTo: "Sarria→Portomarín", distance: "22 km", total: "678 km" },
+            { num: 31, fromTo: "Portomarín→Palas de Rei", distance: "25 km", total: "703 km" },
+            { num: 32, fromTo: "Palas de Rei→Arzúa", distance: "29 km", total: "732 km" },
+            { num: 33, fromTo: "Arzúa→O Pedrouzo", distance: "20 km", total: "752 km" },
+            { num: 34, fromTo: "O Pedrouzo→Santiago", distance: "20 km", total: "772 km" }
+        ];
+
+        let map = null;
+        let mapInitialized = false;
+        let currentTappeFilter = 'all';
+        let currentLanguage = 'it';
+        let currentUnit = 'km';
+
+        // ========== 工具函数 ==========
+        function updateProgressBar(percentage) {
+            const progressFill = document.getElementById('progress-fill');
+            progressFill.style.width = `${percentage}%`;
+        }
+
+        function showNotification(message, type = 'info') {
+            // 在实际应用中，这里可以实现通知系统
+            console.log(`Notification (${type}): ${message}`);
+            
+            // 显示设置页面上的红点
+            const badge = document.getElementById('settings-badge');
+            if (badge) badge.style.display = 'block';
+        }
+
+        // ========== Tappe列表渲染 ==========
+        function renderTappeList(filter = 'all') {
+            const tappeTable = document.getElementById('tappe-table');
+            tappeTable.innerHTML = '';
+            
+            currentTappeFilter = filter;
+            let filteredTappe = tappeData;
+            
+            if (filter !== 'all') {
+                const maxNum = parseInt(filter);
+                filteredTappe = tappeData.filter(t => t.num <= maxNum);
+            }
+            
+            filteredTappe.forEach(t => {
+                const item = document.createElement('div');
+                item.className = 'tappe-item';
+                item.dataset.tappa = t.num;
+                item.innerHTML = `
+                    <div class="num">${t.num}</div>
+                    <div class="route">${t.fromTo}</div>
+                    <div class="distance">${t.distance}</div>
+                    <div class="total">${t.total}</div>
+                `;
+                
+                // 点击tappa选中
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.tappe-item').forEach(i => 
+                        i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    showNotification(`Tappa ${t.num} selezionata: ${t.fromTo}`);
+                });
+                
+                tappeTable.appendChild(item);
+            });
+            
+            // 更新进度条
+            const percentage = filteredTappe.length / tappeData.length * 100;
+            updateProgressBar(percentage);
+        }
+
+        // ========== 初始化设置 ==========
+        function initializeSettings() {
+            const language = localStorage.getItem('camino_language') || 'it';
+            const unit = localStorage.getItem('camino_unit') || 'km';
+            
+            document.getElementById('language-select').value = language;
+            document.getElementById('unit-select').value = unit;
+            
+            currentLanguage = language;
+            currentUnit = unit;
+            
+            // 加载保存的设置状态
+            const toggles = document.querySelectorAll('.setting-item .toggle');
+            toggles.forEach(toggle => {
+                const setting = toggle.parentElement.querySelector('.text').textContent.trim();
+                const saved = localStorage.getItem(`camino_${setting}`) === 'true';
+                if (saved) toggle.classList.add('active');
+            });
+        }
+
+        // ========== 地图功能 ==========
+        function initMap() {
+            if (mapInitialized) return;
+            
+            map = L.map('map').setView([42.8, -5.5], 7);
+            
+            // 标准地图层
+            const standardLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // 地形地图层
+            const terrainLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenTopoMap',
+                maxZoom: 17
+            });
+            
+            const layers = {
+                "Mappa Standard": standardLayer,
+                "Mappa Topografica": terrainLayer
+            };
+            
+            L.control.layers(layers).addTo(map);
+            
+            // 绘制路线
+            const routePoints = [
+                [43.1967, -1.4717], [43.2765, -1.6322], [43.2938, -1.6857],
+                [42.8200, -1.6600], [42.6700, -1.6400], [42.5789, -1.7456],
+                [42.4678, -1.8234], [42.4689, -2.4456], [42.3987, -2.6012],
+                [42.3123, -2.7890], [42.2567, -3.0123], [42.3456, -3.6987],
+                [42.2789, -3.8765], [42.2123, -4.0987], [42.1567, -4.2345],
+                [42.0987, -4.3210], [42.0345, -4.4567], [41.9876, -4.5678],
+                [41.9234, -4.7890], [41.8765, -4.9876], [42.5987, -5.5765],
+                [42.5345, -5.7890], [42.6543, -6.0987], [42.7654, -6.2345],
+                [42.5432, -6.5432], [42.4321, -6.7654], [42.8765, -7.2345],
+                [42.8987, -7.4567], [42.8765, -7.6789], [42.8543, -7.8901],
+                [42.8321, -8.0123], [42.8109, -8.2345], [42.8543, -8.4567],
+                [42.8778, -8.5364]
+            ];
+            
+            const caminoRoute = L.polyline(routePoints, { 
+                color: '#9a2a2a', 
+                weight: 6, 
+                opacity: 0.8,
+                dashArray: '10, 8',
+                lineCap: 'round'
+            }).addTo(map);
+            
+            // 添加标记
+            tappeData.forEach((t, index) => {
+                if (routePoints[index]) {
+                    const marker = L.marker(routePoints[index], {
+                        icon: L.divIcon({
+                            className: 'custom-marker',
+                            html: `
+                                <div style="
+                                    background: linear-gradient(135deg, #9a2a2a, #8B0000);
+                                    color: white;
+                                    border-radius: 50%;
+                                    width: 28px;
+                                    height: 28px;
+                                    display: flex;
+                                    justify-content: center;
+                                    align-items: center;
+                                    font-size: 0.8rem;
+                                    font-weight: bold;
+                                    border: 3px solid white;
+                                    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+                                ">
+                                    ${t.num}
+                                </div>`,
+                            iconSize: [28, 28],
+                            iconAnchor: [14, 28]
+                        })
+                    }).addTo(map);
+                    
+                    marker.bindPopup(`
+                        <div style="font-size: 0.9rem; line-height: 1.5; min-width: 220px;">
+                            <strong style="color: #9a2a2a; font-size: 1.1rem;">Tappa ${t.num}</strong><br>
+                            <strong>${t.fromTo}</strong><br>
+                            <hr style="margin: 8px 0; border: none; border-top: 1px solid #eee;">
+                            <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                                <span>Distanza:</span>
+                                <span style="color: #9a2a2a; font-weight: bold;">${t.distance}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>Progresso totale:</span>
+                                <span style="color: #27ae60; font-weight: bold;">${t.total}</span>
+                            </div>
+                        </div>
+                    `);
+                }
+            });
+            
+            mapInitialized = true;
+        }
+
+        // ========== 更新信息面板 ==========
+        function updateInfoPanel() {
+            const difficulty = document.querySelector('.difficulty-option.active').dataset.difficulty;
+            const difficultyText = difficulty === 'easy' ? 'Facile' : 
+                                   difficulty === 'medium' ? 'Medio' : 'Difficile';
+            const days = document.getElementById('days-input').value;
+            const transport = document.getElementById('transport-select').value;
+            const transportText = transport === 'walk' ? 'A Piedi' : 'In Bicicletta';
+            const tappeCount = currentTappeFilter === 'all' ? 34 : parseInt(currentTappeFilter);
+            const totalDistance = tappeData[tappeCount-1].total;
+            
+            // 计算时间估计
+            let speed = transport === 'walk' ? 4 : 15;
+            if (difficulty === 'medium') speed *= 0.9;
+            if (difficulty === 'hard') speed *= 0.7;
+            
+            const hours = Math.round(parseInt(totalDistance) / speed);
+            const daysEstimate = Math.round(hours / 8);
+            
+            // 更新面板
+            document.getElementById('info-difficulty').textContent = difficultyText;
+            document.getElementById('info-days').textContent = days;
+            document.getElementById('info-transport').textContent = transportText;
+            document.getElementById('info-tappe').textContent = tappeCount;
+            document.getElementById('info-distance').textContent = totalDistance;
+            document.getElementById('info-time').textContent = `~${daysEstimate} giorni`;
+        }
+
+        // ========== 事件监听器 ==========
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始渲染
+            renderTappeList();
+            initializeSettings();
+            
+            // 难度选择
+            document.querySelectorAll('.difficulty-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    document.querySelectorAll('.difficulty-option').forEach(o => 
+                        o.classList.remove('active'));
+                    option.classList.add('active');
+                    updateInfoPanel();
+                });
+            });
+            
+            // 天数输入
+            document.getElementById('days-input').addEventListener('change', updateInfoPanel);
+            document.getElementById('days-input').addEventListener('input', updateInfoPanel);
+            
+            // Tappe选择
+            document.getElementById('tappe-select').addEventListener('change', (e) => {
+                renderTappeList(e.target.value);
+                updateInfoPanel();
+            });
+            
+            // 交通方式选择
+            document.getElementById('transport-select').addEventListener('change', updateInfoPanel);
+            
+            // 按钮功能
+            document.getElementById('preview-btn').addEventListener('click', () => {
+                showNotification('Anteprima percorso generata', 'success');
+                
+                // 切换到地图页
+                document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+                document.querySelector('[data-screen="map-screen"]').classList.add('active');
+                document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+                document.getElementById('map-screen').classList.add('active');
+                
+                if (!mapInitialized) {
+                    initMap();
+                }
+            });
+            
+            document.getElementById('start-btn').addEventListener('click', () => {
+                const startBtn = document.getElementById('start-btn');
+                const originalText = startBtn.innerHTML;
+                
+                startBtn.innerHTML = '🚀 Avvio in corso...';
+                startBtn.disabled = true;
+                
+                setTimeout(() => {
+                    showNotification('Cammino avviato con successo! Buon viaggio!', 'success');
+                    
+                    // 动画效果
+                    startBtn.innerHTML = '🎉 Buon Cammino!';
+                    startBtn.classList.add('pulse');
+                    
+                    setTimeout(() => {
+                        startBtn.innerHTML = originalText;
+                        startBtn.disabled = false;
+                        startBtn.classList.remove('pulse');
+                        
+                        // 切换到地图页
+                        document.getElementById('preview-btn').click();
+                    }, 2000);
+                }, 1000);
+            });
+            
+            // 底部标签切换
+            document.querySelectorAll('.tab-item').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-item').forEach(t => 
+                        t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    const screenId = tab.dataset.screen;
+                    document.querySelectorAll('.screen').forEach(s => 
+                        s.classList.remove('active'));
+                    document.getElementById(screenId).classList.add('active');
+                    
+                    if (screenId === 'map-screen' && !mapInitialized) {
+                        initMap();
+                    }
+                });
+            });
+            
+            // 地图控制按钮
+            document.getElementById('zoom-in')?.addEventListener('click', () => {
+                if (map) map.zoomIn();
+            });
+            
+            document.getElementById('zoom-out')?.addEventListener('click', () => {
+                if (map) map.zoomOut();
+            });
+            
+            document.getElementById('locate-btn')?.addEventListener('click', () => {
+                if (navigator.geolocation && map) {
+                    navigator.geolocation.getCurrentPosition(position => {
+                        const { latitude, longitude } = position.coords;
+                        map.setView([latitude, longitude], 13);
+                        showNotification('Posizione attuale trovata', 'success');
+                    }, () => {
+                        showNotification('Impossibile ottenere la posizione', 'error');
+                    });
+                }
+            });
+            
+            document.getElementById('map-layer')?.addEventListener('click', () => {
+                showNotification('Mappa cambiata', 'info');
+            });
+            
+            // 设置页面功能
+            document.querySelectorAll('.setting-item .toggle').forEach(toggle => {
+                toggle.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                    const setting = this.parentElement.querySelector('.text').textContent.trim();
+                    localStorage.setItem(`camino_${setting}`, this.classList.contains('active'));
+                    showNotification(`Impostazione "${setting}" modificata`, 'info');
+                });
+            });
+            
+            document.getElementById('language-select').addEventListener('change', function(e) {
+                currentLanguage = e.target.value;
+                localStorage.setItem('camino_language', currentLanguage);
+                showNotification(`Lingua cambiata in ${e.target.options[e.target.selectedIndex].text}`, 'success');
+            });
+            
+            document.getElementById('unit-select').addEventListener('change', function(e) {
+                currentUnit = e.target.value;
+                localStorage.setItem('camino_unit', currentUnit);
+                showNotification(`Unità di misura cambiata in ${e.target.value === 'km' ? 'Chilometri' : 'Miglia'}`, 'success');
+            });
+            
+            document.getElementById('reset-settings').addEventListener('click', function() {
+                if (confirm('Sei sicuro di voler resettare tutte le impostazioni?')) {
+                    localStorage.clear();
+                    location.reload();
+                }
+            });
+            
+            // 顶部按钮
+            document.getElementById('notifications-btn').addEventListener('click', () => {
+                showNotification('Nessuna nuova notifica', 'info');
+                document.getElementById('settings-badge').style.display = 'none';
+            });
+            
+            document.getElementById('profile-btn').addEventListener('click', () => {
+                showNotification('Profilo utente', 'info');
+            });
+            
+            // 初始更新
+            updateInfoPanel();
+        });
+    </script>
+</body>
+</html>

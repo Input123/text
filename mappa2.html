@@ -1,0 +1,2296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Camino de Santiago - Servizi e Tappe</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+        
+        body {
+            height: 100vh;
+            overflow: hidden;
+            background-color: #f5f5f5;
+        }
+        
+        /* 顶部栏样式 */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+        }
+        
+        .logo-icon {
+            color: #e37222;
+            font-size: 24px;
+            margin-right: 8px;
+        }
+        
+        .logo-text {
+            font-size: 20px;
+            font-weight: 500;
+            color: #2a5c82;
+        }
+        
+        .search-container {
+            flex: 1;
+            max-width: 600px;
+            position: relative;
+        }
+        
+        .search-box {
+            width: 100%;
+            height: 45px;
+            border-radius: 24px;
+            border: 1px solid #dfe1e5;
+            padding: 0 20px 0 50px;
+            font-size: 16px;
+            outline: none;
+            box-shadow: 0 1px 6px rgba(32,33,36,.28);
+        }
+        
+        .search-box:focus {
+            box-shadow: 0 1px 6px rgba(32,33,36,.4);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #9aa0a6;
+            font-size: 18px;
+        }
+        
+        .user-actions {
+            display: flex;
+            align-items: center;
+            margin-left: 20px;
+        }
+        
+        .user-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #2a5c82;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            margin-left: 15px;
+        }
+        
+        .menu-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #5f6368;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+        
+        .menu-btn:hover {
+            background-color: #f5f5f5;
+        }
+        
+        /* 地图容器 */
+        #map {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            right: 0;
+            bottom: 70px;
+            z-index: 1;
+        }
+        
+        /* 底部导航栏 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background-color: white;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #5f6368;
+            text-decoration: none;
+            flex: 1;
+            height: 100%;
+            transition: all 0.2s;
+        }
+        
+        .nav-item.active {
+            color: #e37222;
+        }
+        
+        .nav-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .nav-icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+        
+        .nav-text {
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        /* 地图控制按钮 */
+        .map-controls {
+            position: absolute;
+            right: 20px;
+            bottom: 90px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background-color: white;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #5f6368;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .control-btn:hover {
+            background-color: #f8f9fa;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            position: fixed;
+            top: 60px;
+            left: -400px;
+            width: 400px;
+            bottom: 70px;
+            background-color: white;
+            z-index: 1001;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            transition: left 0.3s ease;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .sidebar.open {
+            left: 0;
+        }
+        
+        .sidebar h3 {
+            color: #2a5c82;
+            margin-bottom: 15px;
+            font-weight: 600;
+            border-bottom: 2px solid #e37222;
+            padding-bottom: 5px;
+        }
+        
+        .sidebar-item {
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: background-color 0.2s;
+            border-left: 4px solid transparent;
+        }
+        
+        .sidebar-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .sidebar-item.active {
+            background-color: #e8f0fe;
+            border-left-color: #e37222;
+        }
+        
+        .sidebar-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #e8f0fe;
+            color: #2a5c82;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 16px;
+        }
+        
+        .sidebar-content h4 {
+            color: #202124;
+            margin-bottom: 3px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .sidebar-content p {
+            color: #5f6368;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        
+        .camino-info {
+            background-color: #f0f7ff;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .camino-info h4 {
+            color: #2a5c82;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .camino-info p {
+            color: #5f6368;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        /* 阶段选择器 */
+        .stage-selector {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stage-selector h4 {
+            color: #2a5c82;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        
+        .selector-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .selector-group label {
+            flex: 1;
+            font-size: 14px;
+            color: #5f6368;
+            margin-bottom: 5px;
+            display: block;
+        }
+        
+        .selector-group select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #dfe1e5;
+            font-size: 14px;
+            color: #202124;
+            background-color: white;
+            cursor: pointer;
+        }
+        
+        .stage-info {
+            background-color: white;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 10px;
+            border-left: 4px solid #e37222;
+        }
+        
+        .stage-info h5 {
+            color: #2a5c82;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .stage-info p {
+            color: #5f6368;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        
+        .btn-apply {
+            width: 100%;
+            padding: 12px;
+            background-color: #e37222;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-bottom: 10px;
+        }
+        
+        .btn-apply:hover {
+            background-color: #d1651e;
+        }
+        
+        .btn-navigation {
+            width: 100%;
+            padding: 12px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .btn-navigation:hover {
+            background-color: #0d62d9;
+        }
+        
+        /* 路线信息面板 */
+        .route-panel {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .route-panel.show {
+            display: block;
+        }
+        
+        .route-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .route-header h4 {
+            color: #2a5c82;
+            font-size: 16px;
+            margin: 0;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: #5f6368;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+        }
+        
+        .close-btn:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .route-stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .stat-item {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2a5c82;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #5f6368;
+        }
+        
+        .route-steps {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .route-step {
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: flex-start;
+        }
+        
+        .route-step:last-child {
+            border-bottom: none;
+        }
+        
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: #e8f0fe;
+            color: #2a5c82;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            flex-shrink: 0;
+            font-size: 12px;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-size: 14px;
+            color: #202124;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+        
+        .step-details {
+            font-size: 12px;
+            color: #5f6368;
+            margin-bottom: 5px;
+        }
+        
+        .step-distance {
+            font-size: 11px;
+            color: #e37222;
+            font-weight: 500;
+        }
+        
+        /* 导航控制 */
+        .navigation-controls {
+            position: absolute;
+            left: 20px;
+            bottom: 90px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            width: 300px;
+            display: none;
+        }
+        
+        .navigation-controls.show {
+            display: block;
+        }
+        
+        .nav-control-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .nav-control-header h5 {
+            color: #2a5c82;
+            font-size: 16px;
+            margin: 0;
+        }
+        
+        .nav-control-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .nav-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+        
+        .nav-btn-primary {
+            background-color: #1a73e8;
+            color: white;
+        }
+        
+        .nav-btn-primary:hover {
+            background-color: #0d62d9;
+        }
+        
+        .nav-btn-secondary {
+            background-color: #f5f5f5;
+            color: #5f6368;
+        }
+        
+        .nav-btn-secondary:hover {
+            background-color: #e8e8e8;
+        }
+        
+        /* 服务信息面板 */
+        .services-panel {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+        }
+        
+        .services-panel.show {
+            display: block;
+        }
+        
+        .services-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .services-header h4 {
+            color: #2a5c82;
+            font-size: 16px;
+            margin: 0;
+        }
+        
+        /* 目的地筛选器 */
+        .stage-filter {
+            background-color: #f9f9f9;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #e37222;
+        }
+        
+        .stage-filter label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2a5c82;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .stage-filter select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #dfe1e5;
+            font-size: 14px;
+            color: #202124;
+            background-color: white;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        
+        .stage-filter select:focus {
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+        
+        .services-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: 8px 12px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #5f6368;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn.active {
+            background-color: #e37222;
+            color: white;
+            border-color: #e37222;
+        }
+        
+        .filter-btn:hover {
+            background-color: #e8e8e8;
+        }
+        
+        .services-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .service-item {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: flex-start;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .service-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .service-item:last-child {
+            border-bottom: none;
+        }
+        
+        .service-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+            flex-shrink: 0;
+            font-size: 14px;
+            color: white;
+        }
+        
+        .service-icon.bar {
+            background-color: #FFC107;
+        }
+        
+        .service-icon.restaurant {
+            background-color: #E91E63;
+        }
+        
+        .service-icon.hospital {
+            background-color: #F44336;
+        }
+        
+        .service-icon.pharmacy {
+            background-color: #4CAF50;
+        }
+        
+        .service-icon.albergue {
+            background-color: #009688;
+        }
+        
+        .service-icon.market {
+            background-color: #2196F3;
+        }
+        
+        .service-icon.bank {
+            background-color: #9C27B0;
+        }
+        
+        .service-info {
+            flex: 1;
+        }
+        
+        .service-name {
+            font-size: 14px;
+            color: #202124;
+            margin-bottom: 3px;
+            font-weight: 500;
+        }
+        
+        .service-type {
+            font-size: 11px;
+            color: #5f6368;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .service-location {
+            font-size: 12px;
+            color: #5f6368;
+            margin-bottom: 5px;
+        }
+        
+        .service-hours {
+            font-size: 11px;
+            color: #e37222;
+            font-weight: 500;
+        }
+        
+        .service-distance {
+            font-size: 11px;
+            color: #e37222;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .logo-text {
+                font-size: 18px;
+            }
+            
+            .search-container {
+                max-width: none;
+                margin: 0 10px;
+            }
+            
+            .sidebar {
+                width: 320px;
+                left: -320px;
+            }
+            
+            .navigation-controls {
+                width: 280px;
+            }
+            
+            .services-filters {
+                justify-content: center;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .search-box {
+                height: 40px;
+                font-size: 14px;
+                padding-left: 45px;
+            }
+            
+            .nav-text {
+                font-size: 10px;
+            }
+            
+            .nav-icon {
+                font-size: 18px;
+            }
+            
+            .sidebar {
+                width: 280px;
+                left: -280px;
+            }
+            
+            .navigation-controls {
+                width: 250px;
+                left: 10px;
+                bottom: 80px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部栏 -->
+    <div class="header">
+        <button class="menu-btn" id="menu-toggle">
+            <i class="fas fa-bars"></i>
+        </button>
+        
+        <div class="logo">
+            <div class="logo-icon">
+                <i class="fas fa-hiking"></i>
+            </div>
+            <div class="logo-text">Camino Servizi</div>
+        </div>
+        
+        <div class="search-container">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-box" id="search-box" placeholder="Cerca servizi o località">
+        </div>
+        
+        <div class="user-actions">
+            <button class="control-btn" id="my-location" title="La mia posizione">
+                <i class="fas fa-location-arrow"></i>
+            </button>
+            <div class="user-icon">P</div>
+        </div>
+    </div>
+    
+    <!-- 侧边栏 -->
+    <div class="sidebar" id="sidebar">
+        <div class="camino-info">
+            <h4>Camino Francés - Servizi</h4>
+            <p>Trova bar, ristoranti, ospedali, farmacie e altri servizi lungo il Camino. Filtra per tipo di servizio o destinazione.</p>
+        </div>
+        
+        <!-- 服务面板 -->
+        <div class="services-panel show" id="services-panel">
+            <div class="services-header">
+                <h4>Servizi Lungo il Camino</h4>
+                <button class="close-btn" id="close-services">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- 目的地筛选器 -->
+            <div class="stage-filter" id="stage-filter" style="display: block;">
+                <label for="destination-select">Mostra servizi per tappa:</label>
+                <select id="destination-select">
+                    <option value="all">Tutte le tappe</option>
+                    <!-- 动态添加 -->
+                </select>
+            </div>
+            
+            <div class="services-filters">
+                <button class="filter-btn active" data-filter="all">Tutti</button>
+                <button class="filter-btn" data-filter="bar">Bar</button>
+                <button class="filter-btn" data-filter="restaurant">Ristoranti</button>
+                <button class="filter-btn" data-filter="hospital">Ospedali</button>
+                <button class="filter-btn" data-filter="pharmacy">Farmacie</button>
+                <button class="filter-btn" data-filter="albergue">Albergues</button>
+                <button class="filter-btn" data-filter="market">Supermercati</button>
+                <button class="filter-btn" data-filter="bank">Banche/ATM</button>
+            </div>
+            
+            <div class="services-list" id="services-list">
+                <!-- 服务列表将通过JavaScript动态生成 -->
+            </div>
+        </div>
+        
+        <!-- 路线规划面板 -->
+        <div class="stage-selector" id="stage-selector" style="display: none;">
+            <h4>Pianifica Percorso</h4>
+            <div class="selector-group">
+                <div style="flex: 1;">
+                    <label for="start-stage">Da:</label>
+                    <select id="start-stage">
+                        <!-- Opzioni verranno aggiunte via JavaScript -->
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label for="end-stage">A:</label>
+                    <select id="end-stage">
+                        <!-- Opzioni verranno aggiunte via JavaScript -->
+                    </select>
+                </div>
+            </div>
+            
+            <div class="stage-info" id="stage-info" style="display: none;"></div>
+            
+            <button class="btn-apply" id="apply-selection">Visualizza Percorso</button>
+            <button class="btn-navigation" id="start-navigation">
+                <i class="fas fa-directions"></i> Avvia Navigazione
+            </button>
+        </div>
+        
+        <!-- 路线详情面板 -->
+        <div class="route-panel" id="route-panel">
+            <div class="route-header">
+                <h4>Dettagli Percorso</h4>
+                <button class="close-btn" id="close-route">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="route-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="total-distance">0 km</div>
+                    <div class="stat-label">Distanza</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="total-time">0h 0m</div>
+                    <div class="stat-label">Tempo a piedi</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stage-count">0</div>
+                    <div class="stat-label">Tappe</div>
+                </div>
+            </div>
+            
+            <div class="route-steps" id="route-steps"></div>
+        </div>
+        
+        <!-- 阶段列表面板 -->
+        <div id="stages-list-panel" style="display: none;">
+            <h3>Tutte le Tappe (34)</h3>
+            <div id="all-stages-list"></div>
+        </div>
+    </div>
+    
+    <!-- 地图容器 -->
+    <div id="map"></div>
+    
+    <!-- 地图控制按钮 -->
+    <div class="map-controls">
+        <button class="control-btn" id="zoom-in" title="Ingrandisci">
+            <i class="fas fa-plus"></i>
+        </button>
+        <button class="control-btn" id="zoom-out" title="Riduci">
+            <i class="fas fa-minus"></i>
+        </button>
+        <button class="control-btn" id="map-type" title="Cambia tipo mappa">
+            <i class="fas fa-layer-group"></i>
+        </button>
+        <button class="control-btn" id="reset-view" title="Visualizza percorso completo">
+            <i class="fas fa-route"></i>
+        </button>
+    </div>
+    
+    <!-- 导航控制面板 -->
+    <div class="navigation-controls" id="navigation-controls">
+        <div class="nav-control-header">
+            <h5>Navigazione Attiva</h5>
+            <button class="close-btn" id="stop-navigation">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="nav-current-step">Seleziona una tappa per iniziare</div>
+        <div class="nav-control-buttons">
+            <button class="nav-btn nav-btn-secondary" id="prev-step">
+                <i class="fas fa-chevron-left"></i> Precedente
+            </button>
+            <button class="nav-btn nav-btn-primary" id="next-step">
+                Successivo <i class="fas fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- 底部导航栏 -->
+    <nav class="bottom-nav">
+        <a href="#" class="nav-item active" id="nav-home">
+            <i class="fas fa-map-marked-alt nav-icon"></i>
+            <span class="nav-text">Mappa</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-directions">
+            <i class="fas fa-directions nav-icon"></i>
+            <span class="nav-text">Navigazione</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-stages">
+            <i class="fas fa-list-ol nav-icon"></i>
+            <span class="nav-text">Tappe</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-services">
+            <i class="fas fa-concierge-bell nav-icon"></i>
+            <span class="nav-text">Servizi</span>
+        </a>
+        <a href="#" class="nav-item" id="nav-info">
+            <i class="fas fa-info-circle nav-icon"></i>
+            <span class="nav-text">Info</span>
+        </a>
+    </nav>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // 定义34个阶段的圣地亚哥之路数据，包括服务信息
+        const caminoStages = [
+            // 第一阶段到第五阶段
+            { 
+                number: 1,
+                from: "Saint‑Jean‑Pied‑de‑Port",
+                to: "Roncisvalle",
+                distance: "24 km",
+                description: "Tappa pirenaica, impegnativa",
+                type: "start",
+                coordinates: [43.1631, -1.2382],
+                navigation: "Percorso di montagna attraverso i Pirenei. Preparati per una salita impegnativa.",
+                services: [
+                    { type: "bar", name: "Bar du Pont", location: "Centro storico", hours: "7:00-22:00", description: "Bar tipico con vista sul fiume" },
+                    { type: "bar", name: "Café Ttipia", location: "Place Charles de Gaulle", hours: "6:30-20:00", description: "Caffetteria basca tradizionale" },
+                    { type: "restaurant", name: "Restaurant Cheval Blanc", location: "Rue de la Citadelle", hours: "12:00-14:30, 19:00-21:30", description: "Cucina francese tradizionale" },
+                    { type: "restaurant", name: "Pizzeria Ramuntcho", location: "Rue d'Espagne", hours: "12:00-23:00", description: "Pizza e piatti italiani" },
+                    { type: "hospital", name: "Centre Hospitalier", location: "5 km da centro", hours: "24h", description: "Ospedale più vicino" },
+                    { type: "pharmacy", name: "Pharmacie du Bourg", location: "Place du Trinquet", hours: "9:00-12:30, 14:00-19:00", description: "Farmacia centrale" },
+                    { type: "albergue", name: "Albergue de Pèlerins", location: "39 Rue de la Citadelle", hours: "14:00-22:00", description: "35 posti letto" },
+                    { type: "bank", name: "Crédit Agricole", location: "Place Charles de Gaulle", hours: "9:00-12:00, 14:00-17:00", description: "ATM disponibile" }
+                ]
+            },
+            { 
+                number: 2,
+                from: "Roncisvalle",
+                to: "Zubiri",
+                distance: "21 km",
+                description: "Discesa nei boschi",
+                type: "town",
+                coordinates: [43.2620, -1.9900],
+                navigation: "Discesa attraverso bellissimi boschi. Attenzione al terreno scivoloso.",
+                services: [
+                    { type: "bar", name: "Bar Roncesvalles", location: "Complesso monastico", hours: "7:00-21:00", description: "Nel monastero" },
+                    { type: "restaurant", name: "Restaurante Casa Sabina", location: "Vicino all'albergue", hours: "13:00-15:30, 20:00-22:00", description: "Menu del pellegrino" },
+                    { type: "albergue", name: "Albergue de Roncesvalles", location: "Complesso monastico", hours: "10:00-22:00", description: "183 posti letto" },
+                    { type: "pharmacy", name: "Farmacia Burguete", location: "Burguete, 3km", hours: "9:00-13:30, 16:30-20:00", description: "A Burguete" }
+                ]
+            },
+            { 
+                number: 3,
+                from: "Zubiri",
+                to: "Pamplona",
+                distance: "20 km",
+                description: "Arrivo in grande città",
+                type: "city",
+                coordinates: [42.8181, -1.6432],
+                navigation: "Percorso pianeggiante verso Pamplona. Segui le frecce gialle.",
+                services: [
+                    { type: "bar", name: "Café Iruña", location: "Plaza del Castillo", hours: "7:00-24:00", description: "Storico caffè di Pamplona" },
+                    { type: "bar", name: "Bar Gaucho", location: "Calle San Nicolás", hours: "8:00-23:00", description: "Tapas eccellenti" },
+                    { type: "restaurant", name: "Restaurante Baserri", location: "Calle San Nicolás", hours: "13:00-16:00, 20:00-23:00", description: "Cucina basca moderna" },
+                    { type: "restaurant", name: "Casa Otano", location: "Calle San Nicolás", hours: "13:00-16:00, 20:30-23:30", description: "Cucina tradizionale navarra" },
+                    { type: "hospital", name: "Hospital de Navarra", location: "Irunlarrea 3", hours: "24h", description: "Ospedale principale" },
+                    { type: "hospital", name: "Clinica Universitaria", location: "Av. Pío XII", hours: "24h", description: "Clinica privata" },
+                    { type: "pharmacy", name: "Farmacia 24h", location: "Calle Leyre", hours: "24h", description: "Farmacia notturna" },
+                    { type: "albergue", name: "Albergue Jesús y María", location: "Calle Compañía", hours: "10:00-22:00", description: "114 posti letto" },
+                    { type: "market", name: "Mercado de Santo Domingo", location: "Calle Santo Domingo", hours: "8:00-14:00", description: "Mercato coperto" },
+                    { type: "bank", name: "BBVA", location: "Plaza del Castillo", hours: "8:30-14:00", description: "ATM 24h" }
+                ]
+            },
+            { 
+                number: 4,
+                from: "Pamplona",
+                to: "Puente la Reina",
+                distance: "24 km",
+                description: "Alto del Perdón",
+                type: "town",
+                coordinates: [42.6723, -1.8159],
+                navigation: "Salita all'Alto del Perdón con vista panoramica. Poi discesa a Puente la Reina.",
+                services: [
+                    { type: "bar", name: "Bar Alto del Perdón", location: "In cima alla salita", hours: "10:00-18:00", description: "Bar al punto più alto" },
+                    { type: "restaurant", name: "Mesón del Peregrino", location: "Entrata paese", hours: "12:00-16:00, 20:00-23:00", description: "Menu del pellegrino" },
+                    { type: "albergue", name: "Albergue Padres Reparadores", location: "Calle Mayor", hours: "13:00-22:00", description: "Posti limitati" },
+                    { type: "pharmacy", name: "Farmacia Puente la Reina", location: "Calle Mayor", hours: "9:30-13:30, 17:00-20:30", description: "Farmacia locale" }
+                ]
+            },
+            { 
+                number: 5,
+                from: "Puente la Reina",
+                to: "Estella",
+                distance: "22 km",
+                description: "Colline dolci",
+                type: "town",
+                coordinates: [42.6700, -2.0300],
+                navigation: "Colline dolci attraverso la campagna navarra. Passerai vicino a vigneti.",
+                services: [
+                    { type: "bar", name: "Bar Irache", location: "Vicino alla fonte del vino", hours: "9:00-20:00", description: "Accanto alla famosa fonte" },
+                    { type: "restaurant", name: "Asador Emilio", location: "Calle Baja", hours: "13:00-16:00, 20:30-23:00", description: "Carne alla griglia" },
+                    { type: "hospital", name: "Centro de Salud Estella", location: "Av. Yerri", hours: "8:00-20:00", description: "Centro sanitario" },
+                    { type: "pharmacy", name: "Farmacia Estella", location: "Calle Mayor", hours: "9:00-13:30, 16:30-20:30", description: "Farmacia centrale" },
+                    { type: "albergue", name: "Albergue de la Juventud", location: "Calle La Rúa", hours: "12:00-22:00", description: "50 posti letto" },
+                    { type: "market", name: "Supermercado Dia", location: "Av. Yerri", hours: "9:00-21:00", description: "Supermercato economico" }
+                ]
+            },
+            // 为保持代码简洁，这里省略中间阶段...
+            { 
+                number: 34,
+                from: "O Pedrouzo",
+                to: "Santiago de Compostela",
+                distance: "20 km",
+                description: "Arrivo alla Cattedrale",
+                type: "finish",
+                coordinates: [42.8782, -8.5449],
+                navigation: "Arrivo a Santiago! L'ultima tappa ti porterà alla Cattedrale. Emozione garantita!",
+                services: [
+                    { type: "bar", name: "Café Casino", location: "Rúa do Vilar", hours: "8:00-24:00", description: "Caffè storico" },
+                    { type: "bar", name: "Bar Modus Vivendi", location: "Rúa de la Raiña", hours: "18:00-3:00", description: "Atmosfera giovane" },
+                    { type: "restaurant", name: "Restaurante O Curro da Parra", location: "Rúa do Franco", hours: "13:00-16:00, 20:00-23:30", description: "Cucina galiziana creativa" },
+                    { type: "restaurant", name: "Casa Marcelo", location: "Rúa das Hortas", hours: "13:30-15:30, 20:30-23:30", description: "Stella Michelin" },
+                    { type: "hospital", name: "Hospital Clínico Universitario", location: "Rúa da Choupana", hours: "24h", description: "Ospedale universitario" },
+                    { type: "hospital", name: "Hospital San Rafael", location: "Av. de Bos Aires", hours: "24h", description: "Ospedale privato" },
+                    { type: "pharmacy", name: "Farmacia 24h Santiago", location: "Praza de Galicia", hours: "24h", description: "Farmacia notturna" },
+                    { type: "albergue", name: "Albergue Seminario Menor", location: "Rúa da Retorta", hours: "10:00-22:00", description: "300 posti letto" },
+                    { type: "market", name: "Mercado de Abastos", location: "Rúa das Ameas", hours: "7:00-15:00", description: "Mercato storico" },
+                    { type: "bank", name: "Banco Santander", location: "Praza do Obradoiro", hours: "8:30-14:00", description: "ATM 24h davanti alla cattedrale" }
+                ]
+            }
+        ];
+
+        // 图标样式
+        const iconStyles = {
+            start: { color: "#4CAF50", icon: "fa-flag", name: "Partenza" },
+            finish: { color: "#2196F3", icon: "fa-flag-checkered", name: "Arrivo" },
+            city: { color: "#FF5722", icon: "fa-city", name: "Città" },
+            town: { color: "#FF9800", icon: "fa-home", name: "Paese" },
+            village: { color: "#FFC107", icon: "fa-mountain", name: "Villaggio" },
+            cathedral: { color: "#9C27B0", icon: "fa-church", name: "Cattedrale" },
+            church: { color: "#673AB7", icon: "fa-place-of-worship", name: "Chiesa" },
+            castle: { color: "#795548", icon: "fa-chess-rook", name: "Castello" },
+            monastery: { color: "#009688", icon: "fa-place-of-worship", name: "Monastero" }
+        };
+
+        // 服务图标
+        const serviceIcons = {
+            bar: { icon: "fa-beer", class: "bar" },
+            restaurant: { icon: "fa-utensils", class: "restaurant" },
+            hospital: { icon: "fa-hospital", class: "hospital" },
+            pharmacy: { icon: "fa-pills", class: "pharmacy" },
+            albergue: { icon: "fa-bed", class: "albergue" },
+            market: { icon: "fa-shopping-cart", class: "market" },
+            bank: { icon: "fa-university", class: "bank" }
+        };
+
+        // 初始化地图
+        const map = L.map('map').setView([42.5, -4.5], 7);
+        
+        // 添加地图图块层
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Camino Servizi'
+        }).addTo(map);
+
+        // 存储所有标记的数组
+        const markers = [];
+        let selectedRoute = null;
+        let selectedStartMarker = null;
+        let selectedEndMarker = null;
+        let navigationActive = false;
+        let currentStep = 0;
+        let selectedStages = [];
+        let serviceMarkers = [];
+        let currentSelectedStage = 'all';
+
+        // 为每个阶段创建标记
+        function createMarkers() {
+            markers.forEach(marker => map.removeLayer(marker));
+            markers.length = 0;
+            
+            caminoStages.forEach(stage => {
+                const stageType = stage.type || 'town';
+                const { color, icon } = iconStyles[stageType] || { color: "#4285F4", icon: "fa-map-marker-alt" };
+                
+                const customIcon = L.divIcon({
+                    html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><i class="fas ${icon}"></i></div>`,
+                    className: 'custom-marker-icon',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 28]
+                });
+                
+                const marker = L.marker(stage.coordinates, { icon: customIcon })
+                    .addTo(map)
+                    .bindPopup(createStagePopup(stage));
+                
+                marker.stageData = stage;
+                markers.push(marker);
+            });
+            
+            drawCompleteRoute();
+        }
+
+        // 创建阶段弹出窗口内容
+        function createStagePopup(stage) {
+            let servicesHTML = '';
+            if (stage.services && stage.services.length > 0) {
+                servicesHTML = `<div style="margin-top: 10px; border-top: 1px solid #eee; padding-top: 10px;">
+                    <h4 style="margin-bottom: 8px; color: #2a5c82;">Servizi disponibili:</h4>`;
+                
+                // 按类型分组服务
+                const servicesByType = {};
+                stage.services.forEach(service => {
+                    if (!servicesByType[service.type]) {
+                        servicesByType[service.type] = [];
+                    }
+                    servicesByType[service.type].push(service);
+                });
+                
+                // 为每种类型创建列表
+                for (const type in servicesByType) {
+                    const typeName = {
+                        bar: "Bar",
+                        restaurant: "Ristoranti",
+                        hospital: "Ospedali",
+                        pharmacy: "Farmacie",
+                        albergue: "Albergues",
+                        market: "Supermercati",
+                        bank: "Banche/ATM"
+                    }[type] || type;
+                    
+                    servicesHTML += `<p><strong>${typeName}:</strong> `;
+                    servicesHTML += servicesByType[type].map(s => s.name).join(", ");
+                    servicesHTML += `</p>`;
+                }
+                
+                servicesHTML += `</div>`;
+            }
+            
+            return `
+                <div style="max-width: 280px;">
+                    <h3 style="margin-bottom: 8px; color: #2a5c82;">Tappa ${stage.number}: ${stage.from} → ${stage.to}</h3>
+                    <p style="margin-bottom: 8px; color: #5f6368;"><strong>Distanza:</strong> ${stage.distance}</p>
+                    <p style="margin-bottom: 10px; color: #5f6368;">${stage.description}</p>
+                    <p><strong>Navigazione:</strong> ${stage.navigation}</p>
+                    ${servicesHTML}
+                </div>
+            `;
+        }
+
+        // 绘制完整路线
+        function drawCompleteRoute() {
+            if (selectedRoute) {
+                map.removeLayer(selectedRoute);
+            }
+            
+            const routeCoordinates = caminoStages.map(stage => stage.coordinates);
+            selectedRoute = L.polyline(routeCoordinates, {
+                color: '#e37222',
+                weight: 3,
+                opacity: 0.6,
+                dashArray: '5, 5'
+            }).addTo(map);
+        }
+
+        // 填充目的地选择器
+        function populateDestinationSelect() {
+            const destinationSelect = document.getElementById('destination-select');
+            destinationSelect.innerHTML = '<option value="all">Tutte le tappe</option>';
+            
+            caminoStages.forEach(stage => {
+                const option = document.createElement('option');
+                option.value = stage.number;
+                option.textContent = `Tappa ${stage.number}: ${stage.to}`;
+                destinationSelect.appendChild(option);
+            });
+            
+            // 添加事件监听
+            destinationSelect.addEventListener('change', function() {
+                currentSelectedStage = this.value;
+                const activeFilter = document.querySelector('.filter-btn.active').getAttribute('data-filter');
+                
+                if (currentSelectedStage === 'all') {
+                    if (activeFilter === 'all') {
+                        showAllServices();
+                    } else {
+                        filterServicesByType(activeFilter);
+                    }
+                } else {
+                    showServicesNearStageWithType(parseInt(currentSelectedStage), activeFilter);
+                }
+            });
+        }
+
+        // 显示所有服务
+        function showAllServices() {
+            // 清除现有服务标记
+            serviceMarkers.forEach(marker => map.removeLayer(marker));
+            serviceMarkers = [];
+            
+            // 收集所有服务
+            let allServices = [];
+            caminoStages.forEach(stage => {
+                if (stage.services && stage.services.length > 0) {
+                    stage.services.forEach(service => {
+                        allServices.push({
+                            ...service,
+                            stageNumber: stage.number,
+                            stageName: `${stage.from} → ${stage.to}`,
+                            coordinates: stage.coordinates
+                        });
+                    });
+                }
+            });
+            
+            // 显示服务列表
+            displayServicesList(allServices);
+            
+            // 在地图上添加服务标记
+            allServices.forEach(service => {
+                const { icon, class: className } = serviceIcons[service.type] || { icon: "fa-info-circle", class: "default" };
+                
+                const serviceIcon = L.divIcon({
+                    html: `<div style="background-color: ${getServiceColor(service.type)}; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><i class="fas ${icon}"></i></div>`,
+                    className: 'service-marker-icon',
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 24]
+                });
+                
+                const marker = L.marker(service.coordinates, { icon: serviceIcon })
+                    .addTo(map)
+                    .bindPopup(`
+                        <div style="max-width: 250px;">
+                            <h4 style="color: #2a5c82; margin-bottom: 5px;">${service.name}</h4>
+                            <p style="margin-bottom: 5px; color: #5f6368;"><strong>Tipo:</strong> ${getServiceTypeName(service.type)}</p>
+                            <p style="margin-bottom: 5px; color: #5f6368;"><strong>Località:</strong> ${service.location}</p>
+                            <p style="margin-bottom: 5px; color: #5f6368;"><strong>Orari:</strong> ${service.hours}</p>
+                            <p style="margin-bottom: 5px; color: #5f6368;">${service.description}</p>
+                            <p style="margin-bottom: 5px; color: #e37222;"><strong>Tappa:</strong> ${service.stageNumber} - ${service.stageName}</p>
+                        </div>
+                    `);
+                
+                serviceMarkers.push(marker);
+            });
+            
+            // 调整视图以显示所有标记
+            if (allServices.length > 0) {
+                const bounds = L.latLngBounds(allServices.map(s => s.coordinates));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        // 按类型筛选服务
+        function filterServicesByType(type) {
+            // 清除现有服务标记
+            serviceMarkers.forEach(marker => map.removeLayer(marker));
+            serviceMarkers = [];
+            
+            // 收集筛选后的服务
+            let filteredServices = [];
+            caminoStages.forEach(stage => {
+                if (stage.services && stage.services.length > 0) {
+                    stage.services.forEach(service => {
+                        if (type === 'all' || service.type === type) {
+                            filteredServices.push({
+                                ...service,
+                                stageNumber: stage.number,
+                                stageName: `${stage.from} → ${stage.to}`,
+                                coordinates: stage.coordinates
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // 显示筛选后的服务列表
+            displayServicesList(filteredServices);
+            
+            // 在地图上添加筛选后的服务标记
+            filteredServices.forEach(service => {
+                const { icon } = serviceIcons[service.type] || { icon: "fa-info-circle" };
+                
+                const serviceIcon = L.divIcon({
+                    html: `<div style="background-color: ${getServiceColor(service.type)}; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><i class="fas ${icon}"></i></div>`,
+                    className: 'service-marker-icon',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 28]
+                });
+                
+                const marker = L.marker(service.coordinates, { icon: serviceIcon })
+                    .addTo(map)
+                    .bindPopup(`
+                        <div style="max-width: 250px;">
+                            <h4 style="color: #2a5c82; margin-bottom: 5px;">${service.name}</h4>
+                            <p style="margin-bottom: 5px; color: #5f6368;"><strong>Tipo:</strong> ${getServiceTypeName(service.type)}</p>
+                            <p style="margin-bottom: 5px; color: #5f6368;"><strong>Località:</strong> ${service.location}</p>
+                            <p style="margin-bottom: 5px; color: #5f6368;"><strong>Orari:</strong> ${service.hours}</p>
+                            <p style="margin-bottom: 5px; color: #5f6368;">${service.description}</p>
+                            <p style="margin-bottom: 5px; color: #e37222;"><strong>Tappa:</strong> ${service.stageNumber} - ${service.stageName}</p>
+                        </div>
+                    `);
+                
+                serviceMarkers.push(marker);
+            });
+            
+            // 调整视图以显示筛选后的标记
+            if (filteredServices.length > 0) {
+                const bounds = L.latLngBounds(filteredServices.map(s => s.coordinates));
+                map.fitBounds(bounds, { padding: [50, 50] });
+            }
+        }
+
+        // 显示服务列表
+        function displayServicesList(services) {
+            const servicesList = document.getElementById('services-list');
+            servicesList.innerHTML = '';
+            
+            if (services.length === 0) {
+                servicesList.innerHTML = '<p style="text-align: center; color: #5f6368; padding: 20px;">Nessun servizio trovato con i filtri selezionati.</p>';
+                return;
+            }
+            
+            services.forEach(service => {
+                const { icon, class: className } = serviceIcons[service.type] || { icon: "fa-info-circle", class: "default" };
+                
+                const serviceItem = document.createElement('div');
+                serviceItem.className = 'service-item';
+                serviceItem.dataset.stage = service.stageNumber;
+                serviceItem.dataset.type = service.type;
+                
+                // 如果有距离信息，则显示
+                let distanceInfo = '';
+                if (service.distance !== undefined) {
+                    distanceInfo = `<div class="service-distance">A ${service.distance.toFixed(1)} km</div>`;
+                }
+                
+                serviceItem.innerHTML = `
+                    <div class="service-icon ${className}">
+                        <i class="fas ${icon}"></i>
+                    </div>
+                    <div class="service-info">
+                        <div class="service-name">${service.name}</div>
+                        <div class="service-type">${getServiceTypeName(service.type)}</div>
+                        <div class="service-location">${service.location} (Tappa ${service.stageNumber})</div>
+                        <div class="service-hours">${service.hours}</div>
+                        ${distanceInfo}
+                    </div>
+                `;
+                
+                // 添加点击事件
+                serviceItem.addEventListener('click', () => {
+                    map.setView(service.coordinates, 14);
+                    
+                    // 找到并打开对应的服务标记弹窗
+                    serviceMarkers.forEach(marker => {
+                        if (marker._popup && marker._popup._content.includes(service.name)) {
+                            marker.openPopup();
+                        }
+                    });
+                    
+                    // 在移动设备上关闭侧边栏
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+                
+                servicesList.appendChild(serviceItem);
+            });
+        }
+
+        // 获取服务颜色
+        function getServiceColor(type) {
+            const colors = {
+                bar: "#FFC107",
+                restaurant: "#E91E63",
+                hospital: "#F44336",
+                pharmacy: "#4CAF50",
+                albergue: "#009688",
+                market: "#2196F3",
+                bank: "#9C27B0"
+            };
+            return colors[type] || "#4285F4";
+        }
+
+        // 获取服务类型名称
+        function getServiceTypeName(type) {
+            const names = {
+                bar: "Bar",
+                restaurant: "Ristorante",
+                hospital: "Ospedale",
+                pharmacy: "Farmacia",
+                albergue: "Albergue",
+                market: "Supermercato",
+                bank: "Banca/ATM"
+            };
+            return names[type] || type;
+        }
+
+        // 计算两个坐标点之间的距离（公里）
+        function calculateDistance(coord1, coord2) {
+            const [lat1, lon1] = coord1;
+            const [lat2, lon2] = coord2;
+            
+            const R = 6371; // 地球半径（公里）
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // 按目的地和类型筛选服务
+        function showServicesNearStageWithType(stageNumber, type) {
+            // 清除现有服务标记
+            serviceMarkers.forEach(marker => map.removeLayer(marker));
+            serviceMarkers = [];
+            
+            // 找到选中的阶段
+            const selectedStage = caminoStages.find(stage => stage.number === stageNumber);
+            if (!selectedStage) return;
+            
+            // 计算附近阶段（同一阶段和前后的3个阶段）
+            const nearbyStages = caminoStages.filter(stage => 
+                Math.abs(stage.number - stageNumber) <= 3
+            );
+            
+            // 收集附近阶段的服务并按类型筛选
+            let nearbyServices = [];
+            nearbyStages.forEach(stage => {
+                if (stage.services && stage.services.length > 0) {
+                    stage.services.forEach(service => {
+                        if (type === 'all' || service.type === type) {
+                            nearbyServices.push({
+                                ...service,
+                                stageNumber: stage.number,
+                                stageName: `${stage.from} → ${stage.to}`,
+                                coordinates: stage.coordinates,
+                                distance: calculateDistance(selectedStage.coordinates, stage.coordinates)
+                            });
+                        }
+                    });
+                }
+            });
+            
+            // 按距离排序
+            nearbyServices.sort((a, b) => a.distance - b.distance);
+            
+            // 显示服务列表
+            displayServicesList(nearbyServices);
+            
+            // 在地图上添加服务标记
+            nearbyServices.forEach(service => {
+                const { icon, class: className } = serviceIcons[service.type] || { icon: "fa-info-circle", class: "default" };
+                
+                const serviceIcon = L.divIcon({
+                    html: `<div style="background-color: ${getServiceColor(service.type)}; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><i class="fas ${icon}"></i></div>`,
+                    className: 'service-marker-icon',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 28]
+                });
+                
+                const marker = L.marker(service.coordinates, { icon: serviceIcon })
+                    .addTo(map)
+                    .bindPopup(createServicePopup(service, selectedStage));
+                
+                serviceMarkers.push(marker);
+            });
+            
+            // 聚焦到选中的阶段
+            map.setView(selectedStage.coordinates, 10);
+            
+            // 高亮显示选中的阶段
+            markers.forEach(marker => {
+                if (marker.stageData.number === stageNumber) {
+                    const customIcon = L.divIcon({
+                        html: `<div style="background-color: #1a73e8; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; border: 4px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3);"><i class="fas fa-map-marker-alt"></i></div>`,
+                        className: 'selected-stage-marker',
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 40]
+                    });
+                    
+                    marker.setIcon(customIcon);
+                    marker.openPopup();
+                }
+            });
+        }
+
+        // 创建服务弹窗内容（包含距离信息）
+        function createServicePopup(service, selectedStage) {
+            const distance = calculateDistance(selectedStage.coordinates, service.coordinates);
+            
+            return `
+                <div style="max-width: 250px;">
+                    <h4 style="color: #2a5c82; margin-bottom: 5px;">${service.name}</h4>
+                    <p style="margin-bottom: 5px; color: #5f6368;"><strong>Tipo:</strong> ${getServiceTypeName(service.type)}</p>
+                    <p style="margin-bottom: 5px; color: #5f6368;"><strong>Località:</strong> ${service.location}</p>
+                    <p style="margin-bottom: 5px; color: #5f6368;"><strong>Orari:</strong> ${service.hours}</p>
+                    <p style="margin-bottom: 5px; color: #e37222;"><strong>Distanza da ${selectedStage.to}:</strong> ${distance.toFixed(1)} km</p>
+                    <p style="margin-bottom: 5px; color: #5f6368;">${service.description}</p>
+                    <p style="margin-bottom: 5px; color: #2a5c82;"><strong>Tappa:</strong> ${service.stageNumber} - ${service.stageName}</p>
+                </div>
+            `;
+        }
+
+        // 绘制选中的路线
+        function drawSelectedRoute(startStage, endStage) {
+            if (selectedRoute) {
+                map.removeLayer(selectedRoute);
+            }
+            
+            if (selectedStartMarker) {
+                map.removeLayer(selectedStartMarker);
+                selectedStartMarker = null;
+            }
+            
+            if (selectedEndMarker) {
+                map.removeLayer(selectedEndMarker);
+                selectedEndMarker = null;
+            }
+            
+            // 清除服务标记
+            serviceMarkers.forEach(marker => map.removeLayer(marker));
+            serviceMarkers = [];
+            
+            selectedStages = caminoStages.filter(stage => 
+                stage.number >= startStage && stage.number <= endStage
+            );
+            
+            if (selectedStages.length === 0) return;
+            
+            const routeCoordinates = selectedStages.map(stage => stage.coordinates);
+            
+            // 绘制路线
+            selectedRoute = L.polyline(routeCoordinates, {
+                color: '#1a73e8',
+                weight: 6,
+                opacity: 0.9,
+                lineCap: 'round',
+                lineJoin: 'round'
+            }).addTo(map);
+            
+            // 添加起点和终点标记
+            const startStageData = selectedStages[0];
+            const endStageData = selectedStages[selectedStages.length-1];
+            
+            const startIcon = L.divIcon({
+                html: `<div style="background-color: #4CAF50; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; border: 4px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3);"><i class="fas fa-map-marker-alt"></i></div>`,
+                className: 'start-marker-icon',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            });
+            
+            const endIcon = L.divIcon({
+                html: `<div style="background-color: #d32f2f; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; border: 4px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.3);"><i class="fas fa-map-marker-alt"></i></div>`,
+                className: 'end-marker-icon',
+                iconSize: [40, 40],
+                iconAnchor: [20, 40]
+            });
+            
+            selectedStartMarker = L.marker(startStageData.coordinates, { icon: startIcon }).addTo(map);
+            selectedEndMarker = L.marker(endStageData.coordinates, { icon: endIcon }).addTo(map);
+            
+            // 调整视图
+            const bounds = L.latLngBounds(routeCoordinates);
+            map.fitBounds(bounds, { padding: [50, 50] });
+            
+            // 更新路线信息
+            updateRouteInfo(startStage, endStage);
+            
+            // 显示路线面板
+            document.getElementById('route-panel').classList.add('show');
+        }
+
+        // 更新路线信息
+        function updateRouteInfo(startStage, endStage) {
+            if (selectedStages.length === 0) return;
+            
+            const totalDistance = selectedStages.reduce((sum, stage) => {
+                const km = parseFloat(stage.distance);
+                return sum + (isNaN(km) ? 0 : km);
+            }, 0);
+            
+            // 计算预估时间
+            const walkingSpeed = 5;
+            const totalHours = totalDistance / walkingSpeed;
+            const hours = Math.floor(totalHours);
+            const minutes = Math.round((totalHours - hours) * 60);
+            
+            // 更新统计信息
+            document.getElementById('total-distance').textContent = `${totalDistance.toFixed(0)} km`;
+            document.getElementById('total-time').textContent = `${hours > 0 ? hours + 'h ' : ''}${minutes}m`;
+            document.getElementById('stage-count').textContent = selectedStages.length;
+            
+            // 更新导航步骤
+            const routeSteps = document.getElementById('route-steps');
+            routeSteps.innerHTML = '';
+            
+            selectedStages.forEach((stage, index) => {
+                const stepDiv = document.createElement('div');
+                stepDiv.className = 'route-step';
+                
+                const stepIcon = document.createElement('div');
+                stepIcon.className = 'step-icon';
+                
+                if (index === 0) {
+                    stepIcon.innerHTML = '<i class="fas fa-flag"></i>';
+                } else if (index === selectedStages.length - 1) {
+                    stepIcon.innerHTML = '<i class="fas fa-flag-checkered"></i>';
+                } else {
+                    stepIcon.innerHTML = '<i class="fas fa-arrow-right"></i>';
+                }
+                
+                const stepContent = document.createElement('div');
+                stepContent.className = 'step-content';
+                
+                const stepTitle = document.createElement('div');
+                stepTitle.className = 'step-title';
+                stepTitle.textContent = `Tappa ${stage.number}: ${stage.from} → ${stage.to}`;
+                
+                const stepDetails = document.createElement('div');
+                stepDetails.className = 'step-details';
+                stepDetails.textContent = stage.navigation;
+                
+                const stepDistance = document.createElement('div');
+                stepDistance.className = 'step-distance';
+                stepDistance.textContent = stage.distance;
+                
+                stepContent.appendChild(stepTitle);
+                stepContent.appendChild(stepDetails);
+                stepContent.appendChild(stepDistance);
+                
+                stepDiv.appendChild(stepIcon);
+                stepDiv.appendChild(stepContent);
+                
+                routeSteps.appendChild(stepDiv);
+            });
+        }
+
+        // 填充阶段选择器
+        function populateStageSelectors() {
+            const startSelect = document.getElementById('start-stage');
+            const endSelect = document.getElementById('end-stage');
+            const allStagesList = document.getElementById('all-stages-list');
+            
+            startSelect.innerHTML = '';
+            endSelect.innerHTML = '';
+            allStagesList.innerHTML = '';
+            
+            caminoStages.forEach(stage => {
+                const startOption = document.createElement('option');
+                startOption.value = stage.number;
+                startOption.textContent = `Tappa ${stage.number}: ${stage.from}`;
+                startSelect.appendChild(startOption);
+                
+                const endOption = document.createElement('option');
+                endOption.value = stage.number;
+                endOption.textContent = `Tappa ${stage.number}: ${stage.to}`;
+                if (stage.number === 34) endOption.selected = true;
+                endSelect.appendChild(endOption);
+                
+                const stageItem = document.createElement('div');
+                stageItem.className = 'sidebar-item';
+                stageItem.setAttribute('data-stage', stage.number);
+                
+                const stageType = stage.type || 'town';
+                const { icon } = iconStyles[stageType] || { icon: "fa-map-marker-alt" };
+                
+                stageItem.innerHTML = `
+                    <div class="sidebar-icon">
+                        <i class="fas ${icon}"></i>
+                    </div>
+                    <div class="sidebar-content">
+                        <h4>Tappa ${stage.number}: ${stage.from} → ${stage.to}</h4>
+                        <p>${stage.distance} - ${stage.description}</p>
+                    </div>
+                `;
+                
+                allStagesList.appendChild(stageItem);
+                
+                stageItem.addEventListener('click', () => {
+                    startSelect.value = stage.number;
+                    endSelect.value = stage.number;
+                    applyStageSelection();
+                    
+                    if (window.innerWidth < 768) {
+                        sidebar.classList.remove('open');
+                    }
+                });
+            });
+            
+            startSelect.value = 1;
+            endSelect.value = 34;
+        }
+
+        // 应用阶段选择
+        function applyStageSelection() {
+            const startStage = parseInt(document.getElementById('start-stage').value);
+            const endStage = parseInt(document.getElementById('end-stage').value);
+            
+            if (startStage > endStage) {
+                alert('La tappa di partenza non può essere successiva a quella di arrivo.');
+                document.getElementById('start-stage').value = endStage;
+                document.getElementById('end-stage').value = startStage;
+                return;
+            }
+            
+            drawSelectedRoute(startStage, endStage);
+        }
+
+        // 显示服务面板
+        function showServicesPanel() {
+            document.getElementById('services-panel').classList.add('show');
+            document.getElementById('stage-selector').style.display = 'none';
+            document.getElementById('route-panel').classList.remove('show');
+            document.getElementById('stages-list-panel').style.display = 'none';
+            document.getElementById('stage-filter').style.display = 'block';
+            
+            showAllServices();
+        }
+
+        // 显示阶段列表面板
+        function showStagesPanel() {
+            document.getElementById('services-panel').classList.remove('show');
+            document.getElementById('stage-selector').style.display = 'none';
+            document.getElementById('route-panel').classList.remove('show');
+            document.getElementById('stages-list-panel').style.display = 'block';
+            document.getElementById('stage-filter').style.display = 'none';
+        }
+
+        // 显示导航面板
+        function showNavigationPanel() {
+            document.getElementById('services-panel').classList.remove('show');
+            document.getElementById('stage-selector').style.display = 'block';
+            document.getElementById('route-panel').classList.remove('show');
+            document.getElementById('stages-list-panel').style.display = 'none';
+            document.getElementById('stage-filter').style.display = 'none';
+        }
+
+        // 开始导航
+        function startNavigation() {
+            if (selectedStages.length === 0) {
+                alert('Seleziona prima un percorso da seguire.');
+                return;
+            }
+            
+            navigationActive = true;
+            currentStep = 0;
+            
+            // 显示导航控制面板
+            document.getElementById('navigation-controls').classList.add('show');
+            
+            // 更新当前步骤
+            updateCurrentStep();
+            
+            // 聚焦到当前步骤的位置
+            focusOnCurrentStep();
+        }
+
+        // 更新当前步骤
+        function updateCurrentStep() {
+            if (!navigationActive || selectedStages.length === 0) return;
+            
+            const currentStage = selectedStages[currentStep];
+            const navCurrentStep = document.getElementById('nav-current-step');
+            
+            navCurrentStep.innerHTML = `
+                <strong>Tappa ${currentStage.number}: ${currentStage.from} → ${currentStage.to}</strong><br>
+                <small>${currentStage.distance} - ${currentStage.description}</small>
+            `;
+            
+            // 高亮当前步骤的标记
+            markers.forEach(marker => {
+                if (marker.stageData.number === currentStage.number) {
+                    const customIcon = L.divIcon({
+                        html: `<div style="background-color: #1a73e8; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 20px; border: 4px solid white; box-shadow: 0 2px 10px rgba(0,0,0,0.4);"><i class="fas ${iconStyles[currentStage.type || 'town'].icon}"></i></div>`,
+                        className: 'current-marker-icon',
+                        iconSize: [40, 40],
+                        iconAnchor: [20, 40]
+                    });
+                    
+                    marker.setIcon(customIcon);
+                    marker.openPopup();
+                } else {
+                    const stageType = marker.stageData.type || 'town';
+                    const { color, icon } = iconStyles[stageType] || { color: "#4285F4", icon: "fa-map-marker-alt" };
+                    
+                    const customIcon = L.divIcon({
+                        html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><i class="fas ${icon}"></i></div>`,
+                        className: 'custom-marker-icon',
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 28]
+                    });
+                    
+                    marker.setIcon(customIcon);
+                }
+            });
+        }
+
+        // 聚焦到当前步骤
+        function focusOnCurrentStep() {
+            if (!navigationActive || selectedStages.length === 0) return;
+            
+            const currentStage = selectedStages[currentStep];
+            map.setView(currentStage.coordinates, 12);
+        }
+
+        // 停止导航
+        function stopNavigation() {
+            navigationActive = false;
+            document.getElementById('navigation-controls').classList.remove('show');
+            
+            markers.forEach(marker => {
+                const stageType = marker.stageData.type || 'town';
+                const { color, icon } = iconStyles[stageType] || { color: "#4285F4", icon: "fa-map-marker-alt" };
+                
+                const customIcon = L.divIcon({
+                    html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><i class="fas ${icon}"></i></div>`,
+                    className: 'custom-marker-icon',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 28]
+                });
+                
+                marker.setIcon(customIcon);
+            });
+        }
+
+        // DOM元素
+        const menuToggle = document.getElementById('menu-toggle');
+        const sidebar = document.getElementById('sidebar');
+        const searchBox = document.getElementById('search-box');
+        const myLocationBtn = document.getElementById('my-location');
+        const zoomInBtn = document.getElementById('zoom-in');
+        const zoomOutBtn = document.getElementById('zoom-out');
+        const mapTypeBtn = document.getElementById('map-type');
+        const resetViewBtn = document.getElementById('reset-view');
+        const applySelectionBtn = document.getElementById('apply-selection');
+        const startNavigationBtn = document.getElementById('start-navigation');
+        const closeRouteBtn = document.getElementById('close-route');
+        const stopNavigationBtn = document.getElementById('stop-navigation');
+        const prevStepBtn = document.getElementById('prev-step');
+        const nextStepBtn = document.getElementById('next-step');
+        const closeServicesBtn = document.getElementById('close-services');
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        const navItems = document.querySelectorAll('.nav-item');
+
+        // 初始化
+        createMarkers();
+        populateStageSelectors();
+        populateDestinationSelect();
+        showServicesPanel(); // 默认显示服务面板
+        
+        // 切换侧边栏
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+        
+        // 搜索功能
+        searchBox.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                const query = searchBox.value.trim().toLowerCase();
+                if (query) {
+                    // 搜索服务
+                    let foundServices = [];
+                    caminoStages.forEach(stage => {
+                        if (stage.services && stage.services.length > 0) {
+                            stage.services.forEach(service => {
+                                if (service.name.toLowerCase().includes(query) || 
+                                    service.type.toLowerCase().includes(query) ||
+                                    service.description.toLowerCase().includes(query)) {
+                                    foundServices.push({
+                                        ...service,
+                                        stageNumber: stage.number,
+                                        stageName: `${stage.from} → ${stage.to}`,
+                                        coordinates: stage.coordinates
+                                    });
+                                }
+                            });
+                        }
+                    });
+                    
+                    if (foundServices.length > 0) {
+                        // 显示找到的服务
+                        displayServicesList(foundServices);
+                        
+                        // 在地图上显示服务标记
+                        serviceMarkers.forEach(marker => map.removeLayer(marker));
+                        serviceMarkers = [];
+                        
+                        foundServices.forEach(service => {
+                            const { icon } = serviceIcons[service.type] || { icon: "fa-info-circle" };
+                            
+                            const serviceIcon = L.divIcon({
+                                html: `<div style="background-color: ${getServiceColor(service.type)}; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; border: 3px solid white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"><i class="fas ${icon}"></i></div>`,
+                                className: 'service-marker-icon',
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 32]
+                            });
+                            
+                            const marker = L.marker(service.coordinates, { icon: serviceIcon })
+                                .addTo(map)
+                                .bindPopup(`
+                                    <div style="max-width: 250px;">
+                                        <h4 style="color: #2a5c82; margin-bottom: 5px;">${service.name}</h4>
+                                        <p style="margin-bottom: 5px; color: #5f6368;"><strong>Tipo:</strong> ${getServiceTypeName(service.type)}</p>
+                                        <p style="margin-bottom: 5px; color: #5f6368;"><strong>Località:</strong> ${service.location}</p>
+                                        <p style="margin-bottom: 5px; color: #5f6368;"><strong>Orari:</strong> ${service.hours}</p>
+                                        <p style="margin-bottom: 5px; color: #e37222;"><strong>Tappa:</strong> ${service.stageNumber} - ${service.stageName}</p>
+                                    </div>
+                                `)
+                                .openPopup();
+                            
+                            serviceMarkers.push(marker);
+                        });
+                        
+                        // 调整视图
+                        if (foundServices.length > 0) {
+                            const bounds = L.latLngBounds(foundServices.map(s => s.coordinates));
+                            map.fitBounds(bounds, { padding: [50, 50] });
+                        }
+                        
+                        // 显示服务面板
+                        showServicesPanel();
+                        sidebar.classList.add('open');
+                    } else {
+                        // 搜索阶段
+                        const foundStage = caminoStages.find(stage => 
+                            stage.from.toLowerCase().includes(query) || 
+                            stage.to.toLowerCase().includes(query) ||
+                            stage.description.toLowerCase().includes(query)
+                        );
+                        
+                        if (foundStage) {
+                            map.setView(foundStage.coordinates, 12);
+                            
+                            markers.forEach(marker => {
+                                if (marker.stageData.number === foundStage.number) {
+                                    marker.openPopup();
+                                }
+                            });
+                            
+                            document.getElementById('start-stage').value = foundStage.number;
+                            document.getElementById('end-stage').value = foundStage.number;
+                            applyStageSelection();
+                            showNavigationPanel();
+                            sidebar.classList.add('open');
+                        } else {
+                            alert(`Nessun servizio o tappa trovato per "${query}". Prova con "bar", "ristorante", "ospedale" o nomi di città.`);
+                        }
+                    }
+                    
+                    searchBox.value = '';
+                }
+            }
+        });
+        
+        // 定位功能
+        myLocationBtn.addEventListener('click', () => {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const { latitude, longitude } = position.coords;
+                        map.setView([latitude, longitude], 12);
+                        
+                        L.marker([latitude, longitude], {
+                            icon: L.divIcon({
+                                html: `<div style="background-color: #4285F4; width: 24px; height: 24px; border-radius: 50%; border: 3px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.3);"></div>`,
+                                className: 'user-location-icon',
+                                iconSize: [24, 24],
+                                iconAnchor: [12, 12]
+                            })
+                        }).addTo(map)
+                        .bindPopup("La tua posizione attuale")
+                        .openPopup();
+                    },
+                    () => {
+                        alert("Impossibile ottenere la posizione. Assicurati di aver concesso i permessi.");
+                    }
+                );
+            } else {
+                alert("La geolocalizzazione non è supportata dal tuo browser.");
+            }
+        });
+        
+        // 缩放控制
+        zoomInBtn.addEventListener('click', () => {
+            map.zoomIn();
+        });
+        
+        zoomOutBtn.addEventListener('click', () => {
+            map.zoomOut();
+        });
+        
+        // 重置视图
+        resetViewBtn.addEventListener('click', () => {
+            drawCompleteRoute();
+            const routeCoordinates = caminoStages.map(stage => stage.coordinates);
+            const bounds = L.latLngBounds(routeCoordinates);
+            map.fitBounds(bounds, { padding: [50, 50] });
+            
+            document.getElementById('start-stage').value = 1;
+            document.getElementById('end-stage').value = 34;
+            document.getElementById('stage-info').style.display = 'none';
+            document.getElementById('route-panel').classList.remove('show');
+            
+            // 清除服务标记
+            serviceMarkers.forEach(marker => map.removeLayer(marker));
+            serviceMarkers = [];
+            
+            if (selectedStartMarker) {
+                map.removeLayer(selectedStartMarker);
+                selectedStartMarker = null;
+            }
+            
+            if (selectedEndMarker) {
+                map.removeLayer(selectedEndMarker);
+                selectedEndMarker = null;
+            }
+            
+            markers.forEach(marker => {
+                const stageType = marker.stageData.type || 'town';
+                const { color, icon } = iconStyles[stageType] || { color: "#4285F4", icon: "fa-map-marker-alt" };
+                
+                const customIcon = L.divIcon({
+                    html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.2);"><i class="fas ${icon}"></i></div>`,
+                    className: 'custom-marker-icon',
+                    iconSize: [28, 28],
+                    iconAnchor: [14, 28]
+                });
+                
+                marker.setIcon(customIcon);
+            });
+        });
+        
+        // 切换地图类型
+        let mapType = 'street';
+        mapTypeBtn.addEventListener('click', () => {
+            if (mapType === 'street') {
+                L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                    attribution: 'Map data: &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: &copy; <a href="https://opentopomap.org">OpenTopoMap</a> (<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
+                }).addTo(map);
+                mapType = 'topo';
+                mapTypeBtn.title = "Passa a vista stradale";
+            } else {
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors | Camino Servizi'
+                }).addTo(map);
+                mapType = 'street';
+                mapTypeBtn.title = "Passa a vista topografica";
+            }
+        });
+        
+        // 应用选择按钮
+        applySelectionBtn.addEventListener('click', applyStageSelection);
+        
+        // 开始导航按钮
+        startNavigationBtn.addEventListener('click', startNavigation);
+        
+        // 关闭路线面板
+        closeRouteBtn.addEventListener('click', () => {
+            document.getElementById('route-panel').classList.remove('show');
+        });
+        
+        // 关闭服务面板
+        closeServicesBtn.addEventListener('click', () => {
+            document.getElementById('services-panel').classList.remove('show');
+            
+            // 清除服务标记
+            serviceMarkers.forEach(marker => map.removeLayer(marker));
+            serviceMarkers = [];
+        });
+        
+        // 停止导航
+        stopNavigationBtn.addEventListener('click', stopNavigation);
+        
+        // 上一步
+        prevStepBtn.addEventListener('click', () => {
+            if (navigationActive && currentStep > 0) {
+                currentStep--;
+                updateCurrentStep();
+                focusOnCurrentStep();
+            }
+        });
+        
+        // 下一步
+        nextStepBtn.addEventListener('click', () => {
+            if (navigationActive && currentStep < selectedStages.length - 1) {
+                currentStep++;
+                updateCurrentStep();
+                focusOnCurrentStep();
+            }
+        });
+        
+        // 服务筛选按钮
+        filterButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                // 移除所有active类
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // 添加active类到点击的按钮
+                button.classList.add('active');
+                
+                // 应用筛选
+                const filterType = button.getAttribute('data-filter');
+                
+                // 根据当前选择的目的地进行筛选
+                if (currentSelectedStage === 'all') {
+                    filterServicesByType(filterType);
+                } else {
+                    // 先按目的地筛选，再按类型筛选
+                    showServicesNearStageWithType(parseInt(currentSelectedStage), filterType);
+                }
+            });
+        });
+        
+        // 底部导航栏交互
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                navItems.forEach(nav => nav.classList.remove('active'));
+                item.classList.add('active');
+                
+                const id = item.id;
+                switch(id) {
+                    case 'nav-home':
+                        map.setView([42.5, -4.5], 7);
+                        sidebar.classList.remove('open');
+                        break;
+                    case 'nav-directions':
+                        showNavigationPanel();
+                        sidebar.classList.add('open');
+                        break;
+                    case 'nav-stages':
+                        showStagesPanel();
+                        sidebar.classList.add('open');
+                        break;
+                    case 'nav-services':
+                        showServicesPanel();
+                        sidebar.classList.add('open');
+                        break;
+                    case 'nav-info':
+                        const info = L.popup()
+                            .setLatLng([42.5, -4.5])
+                            .setContent(`
+                                <div style="max-width: 250px;">
+                                    <h3 style="color: #2a5c82; margin-bottom: 10px;">Camino Servizi</h3>
+                                    <p>Trova tutti i servizi lungo il Camino Francés: bar, ristoranti, ospedali, farmacie, albergues e molto altro.</p>
+                                    <p style="margin-top: 10px; font-style: italic; color: #e37222;">¡Buen Camino!</p>
+                                </div>
+                            `)
+                            .openOn(map);
+                        break;
+                }
+            });
+        });
+        
+        // 点击地图任何地方关闭侧边栏
+        map.getContainer().addEventListener('click', () => {
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+            }
+        });
+        
+        // 添加欢迎信息
+        setTimeout(() => {
+            const info = L.popup()
+                .setLatLng([42.5, -4.5])
+                .setContent(`
+                    <div style="max-width: 250px;">
+                        <h3 style="color: #2a5c82; margin-bottom: 10px;">Benvenuto su Camino Servizi!</h3>
+                        <p>Clicca su "Servizi" nella barra inferiore per trovare bar, ristoranti, ospedali e altri servizi lungo il Camino.</p>
+                        <p style="margin-top: 10px; font-style: italic; color: #e37222;">¡Buen Camino!</p>
+                    </div>
+                `)
+                .openOn(map);
+        }, 1500);
+    </script>
+</body>
+</html>

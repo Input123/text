@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="it"> <!-- 改为意大利语更贴合commandi di navigazione -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Commandi di Navigazione</title>
+  <style>
+    /* 基础重置：解决100%高度不生效的问题 */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+    }
+
+    body{
+      display: flex;
+      justify-content: center;
+      align-items: flex-start; /* 调整对齐方式，避免被遮挡 */
+      border: solid 1px black;
+      width: 100%;
+      /* 移除body的height:100%，改用html的100vh，适配滚动 */
+      min-height: 100vh; 
+    }
+
+    /* 漂浮导航控件核心样式 */
+    .commandi-navigazione {
+      border: solid 1px red;
+      width: 300px;
+      height: 100px;
+      background-color: lightgray;
+      justify-content: space-between;
+      align-items: center;
+      display: flex;
+      /* 核心：fixed定位实现漂浮，不随页面滚动 */
+      position: fixed; 
+      /* 调整位置：居中+顶部偏移，避免贴边 */
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      /* 提升层级，确保不被遮挡 */
+      z-index: 9999; 
+      /* 优化样式：圆角+阴影，更像控件 */
+      border-radius: 8px;
+      padding: 0 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
+    /* 导航按钮样式优化 */
+    .commandi-navigazione span {
+      width: 60px;
+      height: 60px;
+      background-color: #fff;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 18px;
+      font-weight: bold;
+      
+    }
+
+    /* 鼠标悬浮效果 */
+    .commandi-navigazione span:hover {
+      background-color: #007bff;
+      color: white;
+      transform: scale(1.1);
+    }
+
+    /* 页面内容区域（替代原space） */
+    .page-content {
+      height: 10000px;
+      width: 100%;
+      /* 给漂浮控件留出顶部空间 */
+      padding-top: 140px; 
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <!-- 页面长内容 -->
+  <div class="page-content">Contenuto della pagina (scroll per testare il float)</div>
+
+  <!-- 漂浮的导航命令控件 -->
+  <div class="commandi-navigazione"> 
+    <span>1</span> 
+    <span>2</span> 
+    <span>3</span>
+  </div>
+</body>
+</html>
